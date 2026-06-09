@@ -8,7 +8,7 @@
 - [x] 1.4 `models.py`:`raw_campaigns`(JSONB + `ingestion_batch_id`,append-only)、`unified_campaigns`(唯一鍵 `(source, campaign_name, date)` + `source`/`date` 索引)(D3)
 - [x] 1.5 導入 Alembic:`alembic.ini` + `env.py` + 初始 migration;entrypoint 先 `alembic upgrade head` 再啟 FastAPI(D8/R2)
 - [x] 1.6 三個 mock 產生器(Google/Meta/GA4)格式刻意不一致;固定歷史 + 每跑新增當天;數值以 `date` 為種子;附「故意失敗」開關(D1/D2/D6)
-- [ ] 1.7 里程碑(待 runtime 驗證):`docker compose up` 後 migration 成功、DB 連得上、mock 資料產得出
+- [x] 1.7 里程碑(已驗證):`docker compose up` 後 migration 成功、DB 連得上、mock 資料產得出
 
 ## 2. ETL 核心(Day 1 下午)
 
@@ -17,13 +17,13 @@
 - [x] 2.3 `etl/load.py`:批次 `ON CONFLICT DO UPDATE` 冪等 upsert 進 `unified_campaigns`(D5)
 - [x] 2.4 `POST /etl/run`:串接 extract→transform→load,回傳各來源筆數摘要(含失敗來源標記)
 - [x] 2.5 logging + 單一來源失敗容錯(其餘來源仍完成)(D6)
-- [ ] 2.6 里程碑(待 runtime 驗證):`POST /etl/run` 跑通;同一天連跑兩次驗證完全冪等(筆數與數值皆不變);手動觸發某來源失敗、其餘照常
+- [x] 2.6 里程碑(已驗證):`POST /etl/run` 跑通;同一天連跑兩次驗證完全冪等(筆數與數值皆不變);手動觸發某來源失敗、其餘照常
 
 ## 3. 查詢 API 與資料驗證
 
 - [x] 3.1 `schemas.py`:Pydantic 回應模型
 - [x] 3.2 `GET /campaigns`:查詢 unified 資料,支援 `source` 與 `date` 過濾
-- [ ] 3.3 里程碑(待 runtime 驗證):驗證 raw 層(多批歷史)與 unified 層(最新且去重)資料一致性
+- [x] 3.3 里程碑(已驗證):驗證 raw 層(多批歷史)與 unified 層(最新且去重)資料一致性
 
 ## 4. 分析層與 AI 洞察(Day 1 晚 / Day 2 上午)
 
@@ -32,7 +32,7 @@
 - [x] 4.3 `insights.py`:ETL 後將 KPI 組 prompt 呼叫 gemini-2.5-flash,要求**結構化 JSON 逐條、繁體中文**;結果存進 DB(D4/D9)
 - [x] 4.4 JSON 解析失敗防呆 + 缺 key/呼叫失敗降級(不崩潰、ETL 其餘照常)(D9)
 - [x] 4.5 `GET /insights`:直接讀 DB 已快取洞察(不即時打 Gemini)(D4)
-- [ ] 4.6 里程碑(待 runtime 驗證):ETL 後能讀到一段結構化中文 AI 洞察;斷網仍能由 DB 顯示
+- [x] 4.6 里程碑(已驗證):ETL 後能讀到一段結構化中文 AI 洞察;斷網仍能由 DB 顯示
 
 ## 5. React Dashboard(Day 2 下午)
 
@@ -54,7 +54,7 @@
 - [x] 7.1 `GET /health` 健康檢查端點
 - [x] 7.2 `.env.example` 補齊(DB、Gemini key、`USD_TWD_RATE`);確認密鑰不寫死、不進 git(R4/R5)
 - [x] 7.3 README:架構圖、啟動步驟、設計取捨(固定匯率/mock 等)、面試講稿重點(資料孤島 / 冪等性 / Alembic migration / AI 快取 / 容錯 / 全棧 DevOps)
-- [ ] 7.4 最終里程碑(待 runtime 驗證):整套 `docker compose up` 一鍵啟動,Dashboard 顯示完整結果
+- [x] 7.4 最終里程碑(已驗證):整套 `docker compose up` 一鍵啟動,Dashboard 顯示完整結果
 
 ## 8. ETL 執行紀錄與前端容錯測試(追加)
 
@@ -63,7 +63,7 @@
 - [x] 8.3 前端 `api.js`:`runEtl(failSources)` 帶 `?fail=`、`getEtlRuns()`
 - [x] 8.4 Dashboard 容錯測試區:選來源 → 模擬失敗並執行,顯示各來源成功/失敗
 - [x] 8.5 hash 路由 + 紀錄頁(`#/logs`):逐筆顯示時間、狀態、各來源訊息、洞察狀態
-- [ ] 8.6 里程碑(待 runtime 驗證):按鈕觸發失敗 → 紀錄頁顯示對應成功/失敗訊息
+- [x] 8.6 里程碑(已驗證):按鈕觸發失敗 → 紀錄頁顯示對應成功/失敗訊息
 
 ## 9. 面試展示強化(追加)
 
@@ -71,4 +71,4 @@
 - [x] 9.2 檢視截止日 view filter:`/analytics/summary`、`/timeseries` 加 `end_date`;前端下拉即時重抓
 - [x] 9.3 raw vs unified 對比:`GET /raw/overview` + 前端 RawUnifiedPanel(欄位對應表 + raw/unified 統計列)
 - [x] 9.4 按鈕/下拉樣式統一(primary/secondary/danger、select)
-- [ ] 9.5 里程碑(待 runtime 驗證):面板顯示三來源格式差異;重跑後 raw 漲、unified 不漲
+- [x] 9.5 里程碑(已驗證):面板顯示三來源格式差異;重跑後 raw 漲、unified 不漲
