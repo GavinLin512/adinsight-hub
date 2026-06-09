@@ -1,0 +1,25 @@
+schema: spec-driven
+
+context: |
+  專案:Mini Marketing Data Hub(adinsight-hub)— 行銷數據整合 + AI 分析的概念性 MVP。
+  技術棧:
+    - 後端:Python 3.11、FastAPI、Pandas、SQLAlchemy、psycopg2
+    - 資料庫:PostgreSQL 16(raw 層 + unified 層分離)
+    - AI:Google Gemini API (gemini-2.5-flash)
+    - 前端:React + Vite、Recharts、Axios
+    - 編排:Docker Compose(db / backend / frontend 三個 service)
+  領域重點:
+    - 整合三個格式刻意不一致的 mock 廣告來源(Google Ads / Meta / GA4)→ 統一 schema
+    - ETL 冪等性:以 (source, campaign_name, date) 唯一鍵做 upsert
+    - 行銷 KPI:ROAS / CPA / CTR / 預算佔比
+  時程:約 1.5 天可完成的 MVP,以模擬資料產生器取代真實 API。
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
