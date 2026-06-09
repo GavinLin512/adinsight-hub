@@ -46,14 +46,23 @@
    ```bash
    docker compose up --build
    ```
-4. 觸發一次 ETL(產生資料 + AI 洞察):
+4. 觸發一次 ETL(產生資料 + AI 洞察):於**後台**(下方)按「執行 ETL」,或:
    ```bash
    curl -X POST http://localhost:8000/etl/run
    ```
-   或直接在 Dashboard 右上角按「執行 ETL」。
-5. 開啟 Dashboard:http://localhost:5173
+5. 開啟前端:http://localhost:5173
 
 服務埠:PostgreSQL `5432`、FastAPI `8000`、Vite `5173`。
+
+### 前端路由(shadcn/ui + react-router-dom)
+
+| 路由 | 說明 |
+|------|------|
+| `/` | **前台**:對外只讀儀表板 — KPI、ROAS、預算分配、每日趨勢、AI 洞察、檢視截止日 |
+| `/admin` | **後台**:維運控制台 — 執行 ETL、隨機容錯測試、最後同步狀態、資料孤島(raw vs unified)對比 |
+| `/admin/logs` | ETL 執行紀錄(各次成功/失敗訊息) |
+
+> 後台 MVP 不設存取保護。
 
 ---
 
@@ -87,6 +96,7 @@ python -m pytest tests/ -q
 - **固定匯率**:Meta USD→TWD 使用 `.env` 的固定匯率常數,不反映真實波動;MVP 取捨。
 - **mock 資料**:非真實流量,以模擬產生器取代真實 API 審核;「高流量」以批次 upsert、唯一鍵、索引等架構回應。
 - **資料確定性**:mock 數值以 `date` 為亂數種子 → 同一天重跑數值完全一致(完全冪等),跨天自然增量。
+- **工具鏈鎖定**:前端以 corepack 的 `packageManager` 欄位鎖定精確 pnpm 版本,確保各環境與 CI 可重現;依賴升級走 Renovate 自動開 PR + CI 把關,而非執行期浮動。
 
 完整決策紀錄見 `.claude/rules/decisions.md`(D1–D9 + R1–R6)。
 
