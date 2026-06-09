@@ -4,7 +4,7 @@ from datetime import date as date_type
 
 from fastapi import Depends, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from app import schemas
@@ -94,6 +94,15 @@ def etl_runs(limit: int = Query(default=50, le=200), db: Session = Depends(get_d
         .limit(limit)
         .all()
     )
+
+
+@app.post("/admin/reset-data")
+def reset_data(db: Session = Depends(get_db)):
+    """清除所有累積資料(raw / unified / insights / etl_runs),保留 schema 與 mock 產生器。"""
+    db.execute(text("TRUNCATE raw_campaigns, unified_campaigns, insights, etl_runs RESTART IDENTITY"))
+    db.commit()
+    logger.info("已清除所有資料表")
+    return {"status": "ok", "message": "已清除所有資料"}
 
 
 @app.get("/raw/overview")

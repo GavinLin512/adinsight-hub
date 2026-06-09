@@ -1,0 +1,4 @@
+# pnpm 設定(pnpm 11 起改由此檔讀取,而非 package.json 的 "pnpm" 欄位)
+# 允許 esbuild 執行 postinstall(Vite 依賴)
+allowBuilds:
+  esbuild: true
