@@ -1,0 +1,118 @@
+# 設計決策紀錄(grill-me 逐題確認)
+
+> 本檔記錄 `add-marketing-data-hub` 在 grill-me 過程中,逐一拍板的設計決策。
+> 每問完一題即在此追加。實作時以本檔為準。
+
+## D1. Mock 資料產生策略
+**決定:固定歷史 + 每跑新增當天**
+- 歷史資料固定不變;每次跑 ETL 只 append「當天」這一批新資料。
+- 對歷史而言完全冪等,最接近真實增量同步(incremental sync)的 ETL。
+
+## D2. 當天資料的數值決定方式
+**決定:用 `date` 當亂數種子,數值完全固定**
+- 同一天之內重跑,連數值都一樣 → 完全冪等,Dashboard 不會抖動。
+- 跨天才會有新資料,自然形成增量。
+- 唯一鍵 `(source, campaign_name, date)` 保證同一天重跑走 update、不新增。
+
+## D3. raw 層(raw_campaigns)的本質
+**決定:做法 A — append-only 審計日誌 + batch_id**
+- raw 保留每次擷取的原始歷史(bronze layer 概念),不去重。
+- 每批擷取標上 `ingestion_batch_id` / `run_id`。
+- **連動規則**:transform 清洗時只取「最新一批 batch_id」的資料,不重算所有歷史批次。
+
+## D4. Gemini AI 洞察的產生時機與儲存
+**決定:做法乙 — ETL 跑完先算好、存進資料庫(快取)**
+- ETL 完成、KPI 算好後,順手呼叫一次 Gemini,把洞察文字存進 DB。
+- `GET /insights` 直接讀 DB,不再即時打 Gemini。
+- 好處:Dashboard 秒開、省 API 額度、斷網也能 demo、文字穩定。
+- 資料更新(重跑 ETL)時才重新產生洞察。
+
+## D5. 資料量規模 vs JD「高流量」
+**決定:方向二 — 中等量(數千筆)+ 用設計回應高流量**
+- 產生數千筆,讓圖表夠好看即可,不灌到十萬筆。
+- 「高流量」以架構回答:批次 upsert、唯一鍵、索引、可水平擴展。
+
+## D6. 容錯能力的展示方式
+**決定:做法甲 — 做一個「故意壞」開關**
+- mock 來源加參數/機率,可手動讓某一來源(如 Meta)失敗。
+- ETL 捕捉該錯誤、記 log,其餘來源照常完成 → 容錯能力可現場 demo。
+- 對應 spec:「單一來源失敗時,其餘來源仍應完成處理」。
+
+## D7. 測試策略
+**決定:方向一 — 精選關鍵測試(pytest,約 5~8 個)**
+- 只測三個重點:
+  1. 清洗(transform):欄位統一、USD→TWD、日期正規化。
+  2. KPI:ROAS/CPA/CTR 算對,且分母為 0 不崩。
+  3. 冪等性:同批資料跑兩次,筆數不變。
+- 目的:堵住面試必考題「你怎麼確保正確性」。
+
+## D8. 資料表建立方式
+**決定:做法乙 — Alembic migration(已從 create_all 改為此)**
+- 用 Alembic 管理 schema:結構以遷移檔版本控管、可升級可回滾。
+- 後端不自動建表;啟動流程先跑 `alembic upgrade head` 再啟動 FastAPI(寫進 entrypoint)。
+- 新增 `alembic/`(env.py + versions/ 遷移檔)與 `alembic.ini`。
+- **連動規則**:docker 啟動需確保 migration 在 DB ready 之後、API 啟動之前執行(配合 R2 的 healthcheck/重試)。
+- 面試亮點:懂 migration、schema 版本控管。
+
+## D9. Gemini 洞察的輸出格式
+**決定:做法乙 — 結構化逐條(JSON)**
+- 要求 Gemini 回固定結構:每來源一條建議(來源 + 動作[加/減/維持預算] + 理由)。
+- 統一以**繁體中文**輸出。
+- **連動規則(防呆)**:AI 偶爾不照格式回 → 需做 JSON 解析失敗的容錯(降級為純文字顯示或回明確錯誤,不可崩潰)。
+- 前端洞察卡片以「逐條建議列表」呈現。
+
+---
+
+# 收尾待辦(R 系列,非抉擇,照預設實作)
+
+## R1. CORS
+FastAPI 開啟 CORS,允許前端來源(http://localhost:5173)。否則瀏覽器擋跨來源請求,Dashboard 抓不到資料。
+
+## R2. 開機順序 / DB readiness
+docker compose 對 db 加 healthcheck;backend entrypoint 在連線/migration 前加重試,避免 DB 未就緒就啟動而崩潰。
+
+## R3. 除以零(全面)
+所有 KPI 分母為 0 都要防護:CTR(impressions=0)、CPA(conversions=0)、ROAS(cost=0)、預算佔比(總 cost=0)→ 回 null/0,不可拋錯。
+
+## R4. 匯率寫死
+Meta USD→TWD 使用固定匯率常數,放 `.env` 可調(如 `USD_TWD_RATE`)。README 誠實註明此為 MVP 取捨。
+
+## R5. 密鑰管理
+Gemini API key、DB 密碼一律走 `.env`;提供 `.env.example` 範本;`.gitignore` 排除 `.env`,密鑰不得寫死或進 git。
+
+## R6. 時區 / 日期
+unified 層只存純 `date`(不含時間),清洗時把三來源不同日期格式統一為單一標準日期,避免時區混亂。
+
+## R7. Gemini 暫時性錯誤自動重試(實作後追加)
+`insights._call_gemini` 對暫時性錯誤(503/UNAVAILABLE、429/RESOURCE_EXHAUSTED、overloaded)以指數退避(2s/4s/8s)重試 3 次;其餘錯誤立即拋出並走 D9 降級。減少高流量時需手動重跑,呼應穩定性訴求。
+
+## R8. ETL 執行紀錄 + 隨機容錯測試(追加功能)
+- 新增 `etl_runs` 表(migration 0002)持久化每次執行摘要;`GET /etl/runs` 查詢。
+- 前端「容錯測試」按鈕**隨機**讓 1~3 個來源失敗(使用者不指定),結果由回應誠實回報。
+- hash 路由 `#/logs` 紀錄頁逐筆顯示時間、整體狀態、各來源成功/失敗訊息、洞察狀態。
+- 對應 capability `etl-run-history`。
+
+## R9. 來源失敗時的圖表與洞察語意(澄清 + 微調)
+**現象是正確的**:來源失敗時圖表仍顯示該來源、AI 報告仍出現。原因:
+- `unified_campaigns` 為 upsert 不刪資料(D3),失敗只代表「本次同步未更新該來源」,歷史資料保留 → 圖表(讀累積資料)仍有它。這是真實 ETL 的韌性。
+**兩項微調**:
+1. **無資料變更則略過 AI 洞察**:當 `unified_upserted == 0`(如全部失敗)→ `insights_status="skipped"`,沿用上一份洞察、省 Gemini 呼叫。資料沒變,洞察就不該變。
+2. **Dashboard「最後同步狀態」面板**:圖表上方顯示本次各來源成敗 + 洞察狀態 + 時間,並在非全成功時註明「圖表為累積資料,失敗來源沿用歷史」。狀態由後端 `etl_runs` 載入,重整也在。
+
+## R10. 日期展示:檢視截止日(view filter)+ 每日趨勢圖
+**背景**:同一天重跑數值不變(D2 冪等);且 ROAS 長條圖、預算圓餅圖都是**比例**,加入更多相似日子比例幾乎不動 → 圖表看起來不變,demo 不直觀。
+**為何不用 ETL as_of 做展示**:upsert 累積,一旦載入今天資料後,後續再選日期也不會移除 → 無法穩定展示「逐步增加」。
+**最終作法(兩部分)**:
+1. **每日趨勢線圖**(`GET /analytics/timeseries`,前端 TrendChart 顯示最近 14 天每日花費/收入)— date 維度,日期不同數值不同,是日期變化看得見的地方。
+2. **檢視截止日 view filter**:`GET /analytics/summary` 與 `timeseries` 新增 `end_date`,只回該日(含)以前資料;前端「檢視截止日」最近 7 天下拉選單,**onChange 即時重抓**。往今天前推 → 總花費與趨勢逐步增加(純查詢過濾,與已載入/upsert 狀態無關,穩定可重現)。
+- 比例型圖表(ROAS/預算佔比)本就穩定,UI 加註說明屬正常。
+- `POST /etl/run?as_of=` 仍保留(後端,API/docs 可用),但前端展示改用 view filter。
+
+## R11. 面試展示:raw vs unified 對比面板(招牌)
+**背景**:JD 核心是「整合三個不一致來源」,但原本無任何畫面可秀。grill 後確認這是最該補的展示缺口。
+**作法**:
+- 後端 `GET /raw/overview`:每來源一筆原始 payload + raw 統計(總筆數、批次數、各來源筆數)+ unified 統計(總筆數、日期範圍)。
+- 前端 `RawUnifiedPanel`(Dashboard 第一個面板):
+  1. **對應表**:統一欄位 × 三來源,格內顯示「原始欄位名 + 樣本值」(Meta 金額標 USD),一眼看出 `campaign`/`ad_set_name`/`session_campaign`、日期格式、幣別的差異 → 統一。
+  2. **統計列**:raw(append-only,重跑會漲)vs unified(upsert,冪等不漲),把兩層設計差異視覺化。
+**附帶結論(無需 backfill 按鈕)**:`MOCK_HISTORY_DAYS=90`,跑一次 ETL 即載入 90 天歷史;before/after 與 incremental/冪等 用現有「執行 ETL」重跑即可演(raw 漲、unified 不漲)。
