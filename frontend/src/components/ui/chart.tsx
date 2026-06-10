@@ -126,7 +126,7 @@ const ChartTooltipContent = React.forwardRef<HTMLDivElement, TooltipContentProps
                     style={{ backgroundColor: indicatorColor }}
                   />
                 )}
-                <div className="flex flex-1 justify-between leading-none">
+                <div className="flex flex-1 justify-between gap-2 leading-none">
                   <span className="text-muted-foreground">{itemConfig?.label ?? item.name}</span>
                   {item.value != null && (
                     <span className="font-mono font-medium tabular-nums text-foreground">

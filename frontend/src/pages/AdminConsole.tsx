@@ -112,6 +112,9 @@ export default function AdminConsole() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          <Button variant="yellow" asChild>
+            <Link to="/admin/logs">查看完整 ETL 執行紀錄 →</Link>
+          </Button>
         </CardContent>
       </Card>
 
@@ -128,9 +131,6 @@ export default function AdminConsole() {
         <CardContent><RawUnifiedPanel data={rawOverview} /></CardContent>
       </Card>
 
-      <div>
-        <Link to="/admin/logs" className="text-sm text-primary underline">查看完整 ETL 執行紀錄 →</Link>
-      </div>
     </div>
   )
 }
