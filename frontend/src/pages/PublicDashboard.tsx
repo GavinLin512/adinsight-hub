@@ -28,25 +28,33 @@ const KPI_TIPS: Record<string, string> = {
     'CTR(點擊率):廣告每被看到 100 次,有多少次被點擊。反映廣告吸不吸引人,數字越高越好。',
 }
 
+function KpiTip({ label, tip }: { label: string; tip: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <Tooltip open={open} onOpenChange={setOpen}>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={`${label} 說明`}
+          className="inline-flex text-muted-foreground/70 transition-colors hover:text-foreground"
+          onClick={() => setOpen((v) => !v)}
+        >
+          <Info className="h-3.5 w-3.5" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent onPointerDownOutside={() => setOpen(false)}>
+        {tip}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
 function Kpi({ label, value, tip }: { label: string; value: string; tip?: string }) {
   return (
     <div className="px-4 py-3 md:px-5 md:py-4">
       <div className="flex items-center gap-1 text-xs text-muted-foreground">
         {label}
-        {tip && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-label={`${label} 說明`}
-                className="inline-flex text-muted-foreground/70 transition-colors hover:text-foreground"
-              >
-                <Info className="h-3.5 w-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{tip}</TooltipContent>
-          </Tooltip>
-        )}
+        {tip && <KpiTip label={label} tip={tip} />}
       </div>
       <div className="mt-1.5 text-xl font-semibold tabular-nums tracking-tight md:text-3xl">{value}</div>
     </div>
