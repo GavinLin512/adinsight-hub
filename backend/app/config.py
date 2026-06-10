@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # DB
-    database_url: str = "postgresql+psycopg2://adinsight:adinsight_pw@db:5432/adinsight"
+    database_url: str = "postgresql+psycopg://adinsight:adinsight_pw@db:5432/adinsight"
 
     # Gemini
     gemini_api_key: str = ""
