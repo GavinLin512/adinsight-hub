@@ -4,20 +4,36 @@
 TBD - created by archiving change redesign-frontend-shadcn. Update Purpose after archive.
 ## Requirements
 ### Requirement: 前台只讀儀表板
-前台 `/` SHALL 僅呈現對外的分析內容,不含任何維運控制項(執行 ETL、容錯測試、資料孤島、最後同步狀態)。
+前台 `/` SHALL 僅呈現對外的分析內容,不含任何維運控制項(執行 ETL、容錯測試、資料孤島、最後同步狀態)。前台分為兩段式時間鏡頭:**即時營運概覽(近 14 天)** 受「檢視截止日」過濾;**月度策略建議(近 30 天)** 的 AI 洞察報告**不受**「檢視截止日」影響。
 
 #### Scenario: 前台內容範圍
 - **WHEN** 使用者造訪 `/`
-- **THEN** 顯示整體 KPI、各來源 ROAS、預算分配、每日趨勢、AI 洞察
+- **THEN** 顯示整體 KPI、各來源 ROAS、預算分配、每日趨勢(即時營運概覽 · 近 14 天)
+- **AND** 顯示 AI 洞察(月度策略建議 · 近 30 天)
 - **AND** 不顯示執行 ETL / 容錯測試 / 資料孤島 / 最後同步狀態等後台控制項
 
-#### Scenario: 檢視截止日過濾
+#### Scenario: 檢視截止日過濾(僅影響營運區塊)
 - **WHEN** 使用者於前台選擇檢視截止日
-- **THEN** 以 `end_date` 重新取數,KPI 與趨勢圖即時更新
+- **THEN** 以 `end_date` 重新取數,營運區塊(KPI 與趨勢圖,近 14 天)即時更新
+- **AND** 月度策略建議(AI 洞察報告)不重抓、不變動
+
+#### Scenario: 洞察報告錨點固定
+- **WHEN** 使用者切換檢視截止日至過去某日
+- **THEN** AI 洞察報告仍呈現「最新同步資料日往回 30 天」的內容
+- **AND** 報告標示「截至最後同步」的日期,使其與營運區塊的時間鏡頭區別清楚
 
 #### Scenario: 空狀態
 - **WHEN** 後端尚無資料
 - **THEN** 顯示空狀態提示,引導至後台執行 ETL,而非崩潰
+
+### Requirement: 兩段式視窗標示
+前台 SHALL 在版面上明確標示兩段式時間鏡頭:營運區塊標示「近 14 天」,AI 洞察區塊標示「月度策略建議 · 近 30 天」與「截至最後同步 {日期}」,版面順序為上(營運圖表)、下(策略報告)。
+
+#### Scenario: 區塊標題與順序
+- **WHEN** 前台渲染儀表板
+- **THEN** 營運圖表/KPI 區塊明寫「近 14 天」
+- **AND** AI 洞察區塊以獨立區塊呈現,標題含「月度策略建議 · 近 30 天」與「截至最後同步 {日期}」
+- **AND** 版面順序為營運圖表在上、策略報告在下
 
 ### Requirement: shadcn 化的視覺與圖表
 前台 SHALL 以 shadcn 元件(Card 等)排版,圖表 SHALL 使用 shadcn Charts(`ChartContainer` + `chartConfig`,底層 Recharts)。
