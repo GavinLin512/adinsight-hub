@@ -84,3 +84,29 @@ TBD - created by archiving change redesign-frontend-shadcn. Update Purpose after
 - **WHEN** 前台渲染「月度策略建議」區塊
 - **THEN** ROAS / CPA 圖表在上、AI 逐條建議列表在下,同屬一張策略卡片
 
+### Requirement: 策略卡片整體建議與效率落差
+前台「AI 月度策略建議 · 近 30 天」卡片 SHALL 在逐條建議之外,額外呈現:
+1. **整體建議敘述**:顯示洞察 `summary`(LLM 綜合三來源的整體策略摘要),置於逐條建議上方並以視覺強調(如左色條區塊)。
+2. **預算效率落差圖**:以 shadcn Charts 呈現各來源 `efficiency_gap`(營收佔比 − 預算佔比)的分歧長條,正值與負值以不同顏色區分(正=該加、負=該減),並標註單位與正負語意。
+
+資料皆取自 `GET /insights`(`summary` 與 `metrics`),與該卡片同一快照、同一近 30 天視窗,且 SHALL **不受**「檢視截止日」日期鈕影響。版面 SHALL 維持「先數據後結論」:ROAS/CPA 圖 → 效率落差圖 → 整體建議 + 逐條建議。
+
+#### Scenario: 顯示整體建議敘述
+- **WHEN** 前台載入且洞察含 `summary`
+- **THEN** 在策略卡片顯示整體建議敘述段落,位於逐條建議上方
+
+#### Scenario: 顯示效率落差圖
+- **WHEN** 前台載入且洞察含 `metrics`
+- **THEN** 以分歧長條圖顯示各來源效率落差,正負值以不同顏色區分並標註語意
+
+#### Scenario: 效率落差圖與 LLM 成敗脫鉤
+- **WHEN** 洞察的 `summary`/逐條建議因 LLM 失敗而缺省,但 `metrics` 仍存在
+- **THEN** 效率落差圖仍正常顯示,整體建議敘述則不顯示,頁面不崩潰
+
+#### Scenario: 舊洞察記錄無新欄位
+- **WHEN** 洞察記錄為舊版(無 `summary`/`metrics`)
+- **THEN** 整體建議與效率落差圖以空狀態/不顯示優雅降級,既有逐條建議照常呈現
+
+#### Scenario: 不受檢視截止日影響
+- **WHEN** 使用者切換「檢視截止日」
+- **THEN** 整體建議與效率落差圖不重抓、不變動(僅營運區塊更新)
