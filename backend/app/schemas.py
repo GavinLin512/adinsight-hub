@@ -50,6 +50,7 @@ class InsightItem(BaseModel):
 
 class InsightOut(BaseModel):
     generated_at: datetime | None = None
+    data_date: date_type | None = None  # 洞察彙總視窗的資料錨點(max unified.date),非牆鐘時間
     items: list[InsightItem] = []
     raw_text: str | None = None
     error: str | None = None

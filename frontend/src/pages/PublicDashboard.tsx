@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Info } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import DatePicker from '@/components/DatePicker'
 import BudgetPie from '@/components/BudgetPie'
@@ -60,17 +60,16 @@ export default function PublicDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [viewDate, setViewDate] = useState(fmtDate(new Date()))
 
-  async function load(endDate: string) {
+  async function loadOperational(endDate: string) {
     setLoading(true)
     setError(null)
     try {
-      const [s, ts, sts, i] = await Promise.all([
-        getSummary(endDate, WINDOW_DAYS), getTimeseries(endDate), getTimeseriesBySource(endDate), getInsights(),
+      const [s, ts, sts] = await Promise.all([
+        getSummary(endDate, WINDOW_DAYS), getTimeseries(endDate), getTimeseriesBySource(endDate),
       ])
       setSummary(s)
       setTimeseries(ts)
       setSourceTrend(sts)
-      setInsights(i)
     } catch {
       setError('無法連到後端 API,請確認後端已啟動。')
     } finally {
@@ -78,14 +77,28 @@ export default function PublicDashboard() {
     }
   }
 
+  async function loadInsights() {
+    try {
+      const i = await getInsights()
+      setInsights(i)
+      // 預設「檢視截止日」對齊最新資料日(隨每次 ETL 最新日更動);
+      // 與今天取數結果相同(營運視窗錨在 ≤ 截止日的最新資料日),故無需重抓
+      if (i.data_date) setViewDate(i.data_date)
+    } catch {
+      // 洞察載入失敗不阻斷主儀表板
+    }
+  }
+
   useEffect(() => {
-    load(viewDate)
+    loadOperational(viewDate)
+    loadInsights()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function onDateChange(v: string) {
     setViewDate(v)
-    load(v)
+    loadOperational(v)
+    // 洞察為月度快照,不隨日期鈕重抓
   }
 
   const overall = summary?.overall
@@ -101,7 +114,7 @@ export default function PublicDashboard() {
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           報表檢視截止日
-          <DatePicker value={viewDate} onChange={onDateChange} max={fmtDate(new Date())} />
+          <DatePicker value={viewDate} onChange={onDateChange} max={insights?.data_date ?? fmtDate(new Date())} />
         </div>
       </div>
 
@@ -118,6 +131,7 @@ export default function PublicDashboard() {
 
       {!loading && hasData && overall && summary && (
         <>
+          <p className="text-sm font-medium text-muted-foreground">即時營運概覽 · 近 14 天</p>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Kpi label="總花費 (TWD)" value={`NT$${Math.round(overall.cost_twd).toLocaleString()}`} />
             <Kpi label="整體 ROAS" value={overall.roas != null ? `${overall.roas}x` : '—'} tip={KPI_TIPS.ROAS} />
@@ -156,7 +170,12 @@ export default function PublicDashboard() {
           </div>
 
           <Card>
-            <CardHeader><CardTitle>AI 行銷洞察</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>月度策略建議 · 近 30 天</CardTitle>
+              <CardDescription>
+                {insights?.data_date ? `資料截至 ${insights.data_date}` : '資料截至最新同步'}
+              </CardDescription>
+            </CardHeader>
             <CardContent><InsightCard insights={insights} /></CardContent>
           </Card>
         </>

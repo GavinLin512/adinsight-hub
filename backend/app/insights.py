@@ -18,11 +18,11 @@ from app.models import Insight
 
 logger = logging.getLogger(__name__)
 
-_PROMPT_TEMPLATE = """你是一位資深數位行銷分析師。以下是各廣告來源的成效 KPI(JSON):
+_PROMPT_TEMPLATE = """你是一位資深數位行銷分析師。以下是各廣告來源近 30 天的成效 KPI 彙總(JSON):
 
 {kpi_json}
 
-請依數據給出預算調整建議。**只輸出 JSON**,格式為物件陣列,每個來源一條:
+請依近 30 天數據給出月度預算調整建議。**只輸出 JSON**,格式為物件陣列,每個來源一條:
 [
   {{"source": "<來源>", "action": "<加/減/維持>", "reason": "<繁體中文,一句具體理由,引用 ROAS 或 CPA 等數字>"}}
 ]
@@ -104,7 +104,7 @@ def _call_gemini(prompt: str, retries: int = 3, base_delay: float = 2.0) -> str:
 
 def generate_insights(db: Session) -> Insight:
     """產生洞察並存入 DB,回傳該筆 Insight。"""
-    summary = compute_summary(db)
+    summary = compute_summary(db, days=30)
     record = Insight()
 
     if not settings.gemini_api_key:

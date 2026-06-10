@@ -192,11 +192,14 @@ def analytics_timeseries_by_source(
 def insights(db: Session = Depends(get_db)):
     """讀取 ETL 後已快取的最新一筆 AI 洞察(不即時呼叫 Gemini)。"""
     record = get_latest_insight(db)
+    # 洞察視窗的資料錨點 = 目前 unified 最新資料日(與產生時 compute_summary 的錨點一致)
+    data_date = db.query(func.max(UnifiedCampaign.date)).scalar()
     if record is None:
-        return schemas.InsightOut(error="尚無洞察,請先執行 POST /etl/run")
+        return schemas.InsightOut(data_date=data_date, error="尚無洞察,請先執行 POST /etl/run")
     items = (record.content or {}).get("items", []) if record.content else []
     return schemas.InsightOut(
         generated_at=record.generated_at,
+        data_date=data_date,
         items=items,
         raw_text=record.raw_text,
         error=record.error,

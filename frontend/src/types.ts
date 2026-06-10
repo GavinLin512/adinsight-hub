@@ -45,6 +45,7 @@ export interface InsightItem {
 
 export interface InsightOut {
   generated_at: string | null
+  data_date: string | null // 洞察彙總視窗的資料錨點(max unified.date)
   items: InsightItem[]
   raw_text: string | null
   error: string | null
