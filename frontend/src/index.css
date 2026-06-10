@@ -4,31 +4,33 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* 暖灰紙感底 + 墨色文字 + 單一深青綠 accent(同一暖灰家族,不混冷暖) */
+    --background: 40 25% 97%;
+    --foreground: 30 10% 13%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 30 10% 13%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
-    --chart-1: 221.2 83.2% 53.3%;
-    --chart-2: 212 95% 68%;
-    --chart-3: 42 96% 50%;
-    --chart-4: 142 71% 45%;
-    --chart-5: 0 84% 60%;
+    --popover-foreground: 30 10% 13%;
+    --primary: 172 58% 22%;
+    --primary-foreground: 40 30% 97%;
+    --secondary: 40 18% 93%;
+    --secondary-foreground: 30 10% 18%;
+    --muted: 40 18% 94%;
+    --muted-foreground: 30 7% 40%;
+    --accent: 172 30% 92%;
+    --accent-foreground: 172 58% 16%;
+    --destructive: 8 62% 46%;
+    --destructive-foreground: 40 30% 97%;
+    --border: 38 16% 88%;
+    --input: 38 16% 84%;
+    --ring: 172 58% 28%;
+    --radius: 0.625rem;
+    /* 圖表:google 深青、meta 岩藍、ga4 琥珀(呼應品牌色但降飽和);chart-4 收入、chart-5 花費 */
+    --chart-1: 172 50% 30%;
+    --chart-2: 215 42% 48%;
+    --chart-3: 36 78% 50%;
+    --chart-4: 172 45% 38%;
+    --chart-5: 12 55% 52%;
   }
 
   /* 整體放大:Tailwind 字體與間距皆以 rem 計,調根字級即等比放大全站 */
@@ -39,7 +41,12 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
-    font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    @apply bg-background font-sans text-foreground antialiased;
+    /* 紙感:極淡的青綠氛圍光暈,打破純平底色 */
+    background-image: radial-gradient(1100px 480px at 78% -8%, hsl(172 40% 90% / 0.55), transparent 64%);
+    background-attachment: fixed;
+  }
+  html {
+    scroll-behavior: smooth;
   }
 }

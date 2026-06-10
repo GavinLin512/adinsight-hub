@@ -42,7 +42,10 @@ export default function AdminLogs() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">ETL 執行紀錄</h1>
+        <div>
+          <p className="text-xs font-medium tracking-widest text-primary">OPERATIONS</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight">ETL 執行紀錄</h1>
+        </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={load} disabled={loading}>重新整理</Button>
           <Button variant="outline" asChild><Link to="/admin">← 返回後台</Link></Button>

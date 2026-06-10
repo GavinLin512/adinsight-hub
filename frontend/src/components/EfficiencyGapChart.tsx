@@ -9,8 +9,8 @@ const gapChartConfig = {
   gap: { label: '效率落差 (pp)' },
 } satisfies ChartConfig
 
-const POS = 'hsl(142 71% 45%)' // 綠:多賺少花
-const NEG = 'hsl(0 72% 51%)'   // 紅:多花少賺
+const POS = 'hsl(172 50% 30%)' // 青綠(主色系):多賺少花
+const NEG = 'hsl(12 55% 52%)'  // 赤陶(花費色系):多花少賺
 
 export default function EfficiencyGapChart({ metrics }: { metrics: InsightMetric[] }) {
   const data = (metrics || [])
@@ -50,8 +50,8 @@ export default function EfficiencyGapChart({ metrics }: { metrics: InsightMetric
       </ChartContainer>
       <p className="mt-1 text-xs text-muted-foreground">
         效率落差 = 營收佔比 − 預算佔比;
-        <span className="text-green-600">正(綠)代表多賺少花、該加</span>、
-        <span className="text-red-600">負(紅)代表多花少賺、該減</span>
+        <span className="text-primary">正(青綠)代表多賺少花、該加</span>、
+        <span className="text-destructive">負(赤陶)代表多花少賺、該減</span>
       </p>
     </div>
   )

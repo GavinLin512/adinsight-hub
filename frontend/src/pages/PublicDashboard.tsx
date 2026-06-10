@@ -29,28 +29,49 @@ const KPI_TIPS: Record<string, string> = {
 
 function Kpi({ label, value, tip }: { label: string; value: string; tip?: string }) {
   return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          {label}
-          {tip && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={`${label} 說明`}
-                  className="inline-flex text-muted-foreground/70 hover:text-foreground"
-                >
-                  <Info className="h-3.5 w-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{tip}</TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-        <div className="mt-1.5 text-2xl font-semibold">{value}</div>
-      </CardContent>
-    </Card>
+    <div className="px-5 py-4">
+      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        {label}
+        {tip && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label={`${label} 說明`}
+                className="inline-flex text-muted-foreground/70 transition-colors hover:text-foreground"
+              >
+                <Info className="h-3.5 w-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{tip}</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+      <div className="mt-1.5 text-3xl font-semibold tabular-nums tracking-tight">{value}</div>
+    </div>
+  )
+}
+
+function SectionHeading({ title, desc }: { title: string; desc?: string }) {
+  return (
+    <div className="flex items-baseline gap-3 pt-2">
+      <h2 className="shrink-0 text-base font-semibold tracking-tight">{title}</h2>
+      {desc && <span className="shrink-0 text-xs text-muted-foreground">{desc}</span>}
+      <span aria-hidden="true" className="h-px w-full self-center bg-border" />
+    </div>
+  )
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="animate-pulse space-y-6" aria-label="載入中">
+      <div className="h-28 rounded-xl border border-border/70 bg-card" />
+      <div className="h-72 rounded-xl border border-border/70 bg-card" />
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="h-64 rounded-xl border border-border/70 bg-card" />
+        <div className="h-64 rounded-xl border border-border/70 bg-card" />
+      </div>
+    </div>
   )
 }
 
@@ -140,10 +161,11 @@ export default function PublicDashboard() {
   return (
     <TooltipProvider delayDuration={150}>
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">行銷成效儀表板</h1>
-          <p className="text-xs text-muted-foreground">所有數據為「報表檢視截止日」往回 {WINDOW_DAYS} 天</p>
+          <p className="text-xs font-medium tracking-widest text-primary">MARKETING INTELLIGENCE</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight">行銷成效儀表板</h1>
+          <p className="mt-1.5 text-xs text-muted-foreground">所有數據為「報表檢視截止日」往回 {WINDOW_DAYS} 天</p>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           報表檢視截止日
@@ -152,13 +174,13 @@ export default function PublicDashboard() {
       </div>
 
       {etlProducing && (
-        <div className="flex items-center gap-2 rounded-md border border-yellow-300 bg-yellow-50 px-4 py-2.5 text-sm text-yellow-800 dark:border-yellow-700 dark:bg-yellow-950 dark:text-yellow-300">
-          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-yellow-500" />
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-500" />
           最新報表產製中，完成後將通知您…
         </div>
       )}
       {error && <Card><CardContent className="p-4 text-destructive">{error}</CardContent></Card>}
-      {loading && <p className="text-muted-foreground">載入中…</p>}
+      {loading && <DashboardSkeleton />}
 
       {!loading && !hasData && !error && (
         <Card>
@@ -170,13 +192,15 @@ export default function PublicDashboard() {
 
       {!loading && hasData && overall && summary && (
         <>
-          <p className="text-sm font-medium text-muted-foreground">即時營運概覽 · 近 14 天</p>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Kpi label="總花費 (TWD)" value={`NT$${Math.round(overall.cost_twd).toLocaleString()}`} />
-            <Kpi label="整體 ROAS" value={overall.roas != null ? `${overall.roas}x` : '—'} tip={KPI_TIPS.ROAS} />
-            <Kpi label="整體 CPA" value={overall.cpa != null ? `NT$${overall.cpa}` : '—'} tip={KPI_TIPS.CPA} />
-            <Kpi label="整體 CTR" value={overall.ctr != null ? `${(overall.ctr * 100).toFixed(2)}%` : '—'} tip={KPI_TIPS.CTR} />
-          </div>
+          <SectionHeading title="即時營運概覽" desc={`近 ${WINDOW_DAYS} 天`} />
+          <Card>
+            <div className="grid grid-cols-2 divide-y divide-border/70 md:grid-cols-4 md:divide-x md:divide-y-0 [&>div:nth-child(odd)]:max-md:border-r [&>div:nth-child(odd)]:max-md:border-border/70">
+              <Kpi label="總花費 (TWD)" value={`NT$${Math.round(overall.cost_twd).toLocaleString()}`} />
+              <Kpi label="整體 ROAS" value={overall.roas != null ? `${overall.roas}x` : '—'} tip={KPI_TIPS.ROAS} />
+              <Kpi label="整體 CPA" value={overall.cpa != null ? `NT$${overall.cpa}` : '—'} tip={KPI_TIPS.CPA} />
+              <Kpi label="整體 CTR" value={overall.ctr != null ? `${(overall.ctr * 100).toFixed(2)}%` : '—'} tip={KPI_TIPS.CTR} />
+            </div>
+          </Card>
 
           <Card>
             <CardHeader><CardTitle>每日花費 / 收入趨勢(最近 14 天)</CardTitle></CardHeader>
@@ -208,9 +232,10 @@ export default function PublicDashboard() {
             </Card>
           </div>
 
-          <Card>
+          <SectionHeading title="AI 月度策略建議" desc="近 30 天 · 不隨檢視截止日變動" />
+          <Card className="border-primary/20 bg-gradient-to-b from-accent/40 to-card">
             <CardHeader>
-              <CardTitle>AI 月度策略建議 · 近 30 天</CardTitle>
+              <CardTitle>AI 月度策略建議</CardTitle>
               <CardDescription>
                 {insights?.data_date ? `資料截至 ${insights.data_date}` : '資料截至最新同步'}
               </CardDescription>

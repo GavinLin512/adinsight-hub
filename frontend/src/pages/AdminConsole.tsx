@@ -81,7 +81,10 @@ export default function AdminConsole() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">後台控制台</h1>
+      <div>
+        <p className="text-xs font-medium tracking-widest text-primary">OPERATIONS</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">後台控制台</h1>
+      </div>
 
       <Card>
         <CardHeader>

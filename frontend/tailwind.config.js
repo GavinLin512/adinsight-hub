@@ -5,6 +5,10 @@ export default {
   theme: {
     container: { center: true, padding: '2rem', screens: { '2xl': '1400px' } },
     extend: {
+      fontFamily: {
+        // Space Grotesk 負責拉丁字與數字(帶個性),CJK 落到 Noto Sans TC
+        sans: ['"Space Grotesk"', '"Noto Sans TC"', '"PingFang TC"', '"Microsoft JhengHei"', 'sans-serif'],
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
