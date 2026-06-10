@@ -53,8 +53,8 @@ export default function InsightCard({ insights, section }: Props) {
           <div className="text-sm font-medium">各來源建議</div>
           <ul className="divide-y">
             {(insights.items || []).map((item, i) => (
-              <li key={i} className="flex items-baseline gap-3 py-2.5">
-                <Badge variant={ACTION_VARIANT[item.action] ?? 'secondary'} className="shrink-0">
+              <li key={i} className="flex flex-col gap-1 py-2.5 sm:flex-row sm:items-baseline sm:gap-3">
+                <Badge variant={ACTION_VARIANT[item.action] ?? 'secondary'} className="w-fit shrink-0">
                   {item.source} · {ACTION_LABEL[item.action] ?? item.action}
                 </Badge>
                 <span className="text-sm leading-relaxed">{item.reason}</span>
