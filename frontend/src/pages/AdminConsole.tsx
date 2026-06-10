@@ -43,6 +43,10 @@ export default function AdminConsole() {
 
   async function handleRun(failSources: string[] = []) {
     setRunning(true)
+    const bc = new BroadcastChannel('adinsight-etl')
+    // localStorage 為持久狀態(供前台掛載時補讀),BroadcastChannel 為即時轉換
+    localStorage.setItem('adinsight-etl', JSON.stringify({ status: 'running', ts: Date.now() }))
+    bc.postMessage({ type: 'etl_started' })
     try {
       const result = await runEtl(failSources, runDate)
       const failed = Object.entries(result.sources || {})
@@ -56,6 +60,9 @@ export default function AdminConsole() {
       toast.error('ETL 執行失敗。')
     } finally {
       setRunning(false)
+      localStorage.setItem('adinsight-etl', JSON.stringify({ status: 'idle', ts: Date.now() }))
+      bc.postMessage({ type: 'etl_done' })
+      bc.close()
     }
   }
 

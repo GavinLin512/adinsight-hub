@@ -12,12 +12,12 @@ export default function InsightCard({ insights }: { insights: InsightOut | null 
 
   const hasItems = insights.items && insights.items.length > 0
   if (insights.error && !hasItems && !insights.raw_text) {
-    return <p className="text-sm text-muted-foreground">AI 洞察暫時無法取得:{insights.error}</p>
+    return <p className="whitespace-pre-line text-sm text-muted-foreground">AI 洞察暫時無法取得:{insights.error}</p>
   }
 
   return (
     <div className="space-y-3">
-      {insights.error && <p className="text-xs text-amber-600">注意:{insights.error}</p>}
+      {insights.error && <p className="whitespace-pre-line text-xs text-amber-600">注意:{insights.error}</p>}
       {insights.raw_text && (
         <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 text-xs">{insights.raw_text}</pre>
       )}

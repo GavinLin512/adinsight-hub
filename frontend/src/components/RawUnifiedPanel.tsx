@@ -4,20 +4,21 @@ import type { RawOverview, SourceKey } from '@/types'
 
 interface FieldMapRow {
   unified: string
+  zh: string
   google: string
   meta: string
   ga4: string
 }
 
-// 統一欄位 → 各來源原始欄位名(刻意不一致)
+// 統一欄位 → 各來源原始欄位名(刻意不一致);zh 為該欄位中文意思
 const FIELD_MAP: FieldMapRow[] = [
-  { unified: 'campaign_name', google: 'campaign', meta: 'ad_set_name', ga4: 'session_campaign' },
-  { unified: 'date', google: 'day', meta: 'date', ga4: 'event_date' },
-  { unified: 'impressions', google: 'impressions', meta: 'impressions', ga4: 'ad_impressions' },
-  { unified: 'clicks', google: 'clicks', meta: 'link_clicks', ga4: 'ad_clicks' },
-  { unified: 'cost_twd', google: 'cost', meta: 'spend', ga4: 'ad_cost' },
-  { unified: 'conversions', google: 'conversions', meta: 'results', ga4: 'conversions' },
-  { unified: 'revenue_twd', google: 'conv_value', meta: 'revenue', ga4: 'total_revenue' },
+  { unified: 'campaign_name', zh: '活動名稱', google: 'campaign', meta: 'ad_set_name', ga4: 'session_campaign' },
+  { unified: 'date', zh: '日期', google: 'day', meta: 'date', ga4: 'event_date' },
+  { unified: 'impressions', zh: '曝光數', google: 'impressions', meta: 'impressions', ga4: 'ad_impressions' },
+  { unified: 'clicks', zh: '點擊數', google: 'clicks', meta: 'link_clicks', ga4: 'ad_clicks' },
+  { unified: 'cost_twd', zh: '花費(新台幣)', google: 'cost', meta: 'spend', ga4: 'ad_cost' },
+  { unified: 'conversions', zh: '轉換數', google: 'conversions', meta: 'results', ga4: 'conversions' },
+  { unified: 'revenue_twd', zh: '營收(新台幣)', google: 'conv_value', meta: 'revenue', ga4: 'total_revenue' },
 ]
 
 const SOURCE_META: Record<SourceKey, { label: string; note: string }> = {
@@ -73,7 +74,10 @@ export default function RawUnifiedPanel({ data }: { data: RawOverview | null }) 
         <TableBody>
           {FIELD_MAP.map((row) => (
             <TableRow key={row.unified}>
-              <TableCell className="whitespace-nowrap bg-muted/30 font-medium">{row.unified}</TableCell>
+              <TableCell className="whitespace-nowrap bg-muted/30 font-medium">
+                {row.unified}
+                <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">{row.zh}</span>
+              </TableCell>
               <TableCell><Cell field={row.google} payload={sample.google} /></TableCell>
               <TableCell>
                 <Cell

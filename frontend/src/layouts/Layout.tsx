@@ -35,8 +35,8 @@ export default function Layout() {
       <main className="mx-auto max-w-6xl px-6 py-6">
         <Outlet />
       </main>
-      {/* 推到 header 下方,避免遮擋頂部操作按鈕 */}
-      <Toaster richColors position="top-right" offset={72} />
+      {/* 推到 header 下方,避免遮擋頂部操作按鈕;expand 讓多則 toast 不疊加,依序往下排 */}
+      <Toaster richColors expand position="top-right" offset={72} />
     </div>
   )
 }

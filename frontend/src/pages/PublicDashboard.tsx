@@ -8,7 +8,9 @@ import BudgetPie from '@/components/BudgetPie'
 import InsightCard from '@/components/InsightCard'
 import RoasChart from '@/components/RoasChart'
 import SourceRoasTrend from '@/components/SourceRoasTrend'
+import StrategyKpiChart from '@/components/StrategyKpiChart'
 import TrendChart from '@/components/TrendChart'
+import { toast } from 'sonner'
 import { getInsights, getSummary, getTimeseries, getTimeseriesBySource } from '@/api'
 import { fmtDate } from '@/lib/dates'
 import type { AnalyticsSummary, InsightOut, SourceTimeseriesPoint, TimeseriesPoint } from '@/types'
@@ -56,9 +58,11 @@ export default function PublicDashboard() {
   const [timeseries, setTimeseries] = useState<TimeseriesPoint[]>([])
   const [sourceTrend, setSourceTrend] = useState<SourceTimeseriesPoint[]>([])
   const [insights, setInsights] = useState<InsightOut | null>(null)
+  const [strategySummary, setStrategySummary] = useState<AnalyticsSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [viewDate, setViewDate] = useState(fmtDate(new Date()))
+  const [etlProducing, setEtlProducing] = useState(false)
 
   async function loadOperational(endDate: string) {
     setLoading(true)
@@ -79,13 +83,14 @@ export default function PublicDashboard() {
 
   async function loadInsights() {
     try {
-      const i = await getInsights()
+      const [i, strat] = await Promise.all([getInsights(), getSummary(null, 30)])
       setInsights(i)
+      setStrategySummary(strat)
       // 預設「檢視截止日」對齊最新資料日(隨每次 ETL 最新日更動);
       // 與今天取數結果相同(營運視窗錨在 ≤ 截止日的最新資料日),故無需重抓
       if (i.data_date) setViewDate(i.data_date)
     } catch {
-      // 洞察載入失敗不阻斷主儀表板
+      // 洞察/策略摘要載入失敗不阻斷主儀表板
     }
   }
 
@@ -93,6 +98,33 @@ export default function PublicDashboard() {
     loadOperational(viewDate)
     loadInsights()
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    // 掛載時補讀:可能在本頁掛載前 ETL 就已開始(錯過即時廣播);5 分鐘內視為仍在產製
+    try {
+      const raw = localStorage.getItem('adinsight-etl')
+      if (raw) {
+        const { status, ts } = JSON.parse(raw) as { status: string; ts: number }
+        if (status === 'running' && Date.now() - ts < 5 * 60 * 1000) setEtlProducing(true)
+      }
+    } catch {
+      // 忽略解析錯誤
+    }
+
+    const bc = new BroadcastChannel('adinsight-etl')
+    bc.onmessage = (e: MessageEvent<{ type: string }>) => {
+      if (e.data.type === 'etl_started') {
+        setEtlProducing(true)
+      } else if (e.data.type === 'etl_done') {
+        setEtlProducing(false)
+        toast.success('報告已重新產生，請重新整理', {
+          duration: Infinity,
+          action: { label: '立即重新整理', onClick: () => window.location.reload() },
+        })
+      }
+    }
+    return () => bc.close()
   }, [])
 
   function onDateChange(v: string) {
@@ -118,6 +150,12 @@ export default function PublicDashboard() {
         </div>
       </div>
 
+      {etlProducing && (
+        <div className="flex items-center gap-2 rounded-md border border-yellow-300 bg-yellow-50 px-4 py-2.5 text-sm text-yellow-800 dark:border-yellow-700 dark:bg-yellow-950 dark:text-yellow-300">
+          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-yellow-500" />
+          最新報表產製中，完成後將通知您…
+        </div>
+      )}
       {error && <Card><CardContent className="p-4 text-destructive">{error}</CardContent></Card>}
       {loading && <p className="text-muted-foreground">載入中…</p>}
 
@@ -171,12 +209,15 @@ export default function PublicDashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>月度策略建議 · 近 30 天</CardTitle>
+              <CardTitle>AI 月度策略建議 · 近 30 天</CardTitle>
               <CardDescription>
                 {insights?.data_date ? `資料截至 ${insights.data_date}` : '資料截至最新同步'}
               </CardDescription>
             </CardHeader>
-            <CardContent><InsightCard insights={insights} /></CardContent>
+            <CardContent className="space-y-6">
+              <StrategyKpiChart bySource={strategySummary?.by_source ?? []} />
+              <InsightCard insights={insights} />
+            </CardContent>
           </Card>
         </>
       )}
