@@ -1,5 +1,22 @@
 # AdInsight Hub — Mini Marketing Data Hub
 
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-150458?logo=pandas&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?logo=sqlalchemy&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)
+![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-06B6D4?logo=tailwindcss&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+
+[![Frontend: Cloudflare](https://img.shields.io/badge/Frontend-Cloudflare-F38020?logo=cloudflare&logoColor=white)](https://adinsight-hub.pages.dev)
+[![Backend: Render](https://img.shields.io/badge/Backend-Render-000000?logo=render&logoColor=white)](https://adinsight-hub.onrender.com/docs)
+![Database: Neon](https://img.shields.io/badge/Database-Neon-00E599?logo=postgresql&logoColor=white)
+
+**線上 Demo:** https://adinsight-hub.pages.dev — 後端為 Render 免費層,閒置後首次載入約需 30–50 秒喚醒,請稍候。
+
 把三個格式刻意不一致的廣告來源(Google Ads / Meta / GA4 mock)整合進統一資料庫,計算行銷 KPI,並用 Gemini 產出商業洞察,最後以 React Dashboard 可視化。全套以 Docker Compose 一鍵啟動。
 
 > 概念性 MVP:以模擬資料產生器取代真實 API。三來源格式(欄位名、日期格式、幣別)刻意不一致,真實呈現「資料孤島」與「清洗」的工程挑戰。
@@ -18,7 +35,7 @@
  FastAPI 後端
    Extract ─→ Transform(Pandas 清洗/統一)─→ Load(批次冪等 upsert)
         分析層(ROAS/CPA/CTR/預算佔比)
-        AI 洞察層(Gemini,ETL 後產生並快取)
+        AI 洞察層(Gemini,失敗時 NVIDIA NIM 後備;ETL 後產生並快取)
         │
         ▼
  PostgreSQL
@@ -30,7 +47,7 @@
  Docker Compose 編排:db / backend / frontend
 ```
 
-技術棧:Python 3.11、FastAPI、Pandas、SQLAlchemy、Alembic、PostgreSQL 16、Google Gemini (gemini-2.5-flash)、React + Vite + Recharts。
+技術棧:Python 3.11、FastAPI、Pandas、SQLAlchemy、Alembic、PostgreSQL 18(psycopg 3)、Google Gemini (gemini-2.5-flash) + NVIDIA NIM 後備、React + Vite + Recharts(shadcn/ui Charts)。
 
 ---
 
@@ -66,6 +83,20 @@
 
 ---
 
+## 部署
+
+雲端採三方託管,各取其免費層與託管優勢:
+
+| 層 | 平台 | 網址 | 說明 |
+|------|------|------|------|
+| ![Cloudflare](https://img.shields.io/badge/-Cloudflare-F38020?logo=cloudflare&logoColor=white) 前端 | Cloudflare Pages | [adinsight-hub.pages.dev](https://adinsight-hub.pages.dev) | Vite 靜態產物 + 全球 CDN |
+| ![Render](https://img.shields.io/badge/-Render-000000?logo=render&logoColor=white) 後端 | Render | [adinsight-hub.onrender.com](https://adinsight-hub.onrender.com/docs) | FastAPI 容器;啟動時自動 `alembic upgrade head`,連接埠由 `$PORT` 動態指定。**免費層 scale-to-zero,閒置後首次請求約需 30–50 秒冷啟動** |
+| ![Neon](https://img.shields.io/badge/-Neon-00E599?logo=postgresql&logoColor=white) 資料庫 | Neon | — | Serverless PostgreSQL 18,scale-to-zero |
+
+> 本機開發仍以 `docker compose up --build` 一鍵啟動(db / backend / frontend);雲端則三方分離部署。
+
+---
+
 ## API 端點
 
 | Method | Path | 說明 |
@@ -98,15 +129,19 @@ python -m pytest tests/ -q
 - **資料確定性**:mock 數值以 `date` 為亂數種子 → 同一天重跑數值完全一致(完全冪等),跨天自然增量。
 - **工具鏈鎖定**:前端以 corepack 的 `packageManager` 欄位鎖定精確 pnpm 版本,確保各環境與 CI 可重現;依賴升級走 Renovate 自動開 PR + CI 把關,而非執行期浮動。
 
-完整決策紀錄見 `.claude/rules/decisions.md`(D1–D9 + R1–R6)。
+完整決策紀錄見 `.claude/rules/decisions.md`(D1–D9 + R1–R16)。
 
 ---
 
 ## 專案展示重點
 
-1. **資料孤島**:三個格式完全不同的來源,以 raw 層保留原貌、unified 層統一 schema 的兩層設計整合。
-2. **冪等性 / 穩定性**:ETL 以 `(source, campaign_name, date)` 唯一鍵批次 upsert,重跑不產生重複資料;raw 層 append-only 保留每批擷取歷史(bronze layer)。
-3. **Schema migration**:以 Alembic 版本控管資料表結構,可升級可回滾。
-4. **容錯**:`?fail=<source>` 可現場展示單一來源失敗、其餘照常完成。
-5. **AI 邏輯化 + 快取**:把 KPI 餵給 Gemini 產出結構化預算建議,並於 ETL 後快取進 DB,Dashboard 秒開、斷網也能 demo。
-6. **全端 + DevOps**:Docker Compose 一個指令啟動 db / backend / frontend。
+1. **資料孤島整合**:三個格式完全不同的來源(欄位名 / 日期格式 / 幣別皆異),以 raw 層保留原貌、unified 層統一 schema 的兩層(bronze→silver)設計整合;前台有 raw vs unified 對比面板把「整合」這件事視覺化。
+2. **冪等性 / 增量同步**:ETL 以 `(source, campaign_name, date)` 唯一鍵批次 upsert,重跑不產生重複;raw 層 append-only 保留每批擷取歷史(`batch_id`),transform 只取最新批次 → 最接近真實的 incremental sync。
+3. **Schema migration**:以 Alembic 版本控管資料表結構,可升級可回滾;後端啟動先 `alembic upgrade head` 再起 API。
+4. **容錯 + 可觀測性**:可隨機讓 1~3 個來源失敗,其餘照常完成;每次執行摘要持久化到 `etl_runs` 表,`#/logs` 頁逐筆呈現各來源成敗,Dashboard 頂部顯示「最後同步狀態」。
+5. **AI 韌性(三層降級)**:Gemini 為主、對暫時性錯誤(429/503)指數退避重試;耗盡後切 NVIDIA NIM 後備;再不行則 JSON 解析失敗降級為純文字 / 明確錯誤 — 全程不崩潰。
+6. **確定性數字 vs 生成式文字分層**:效率落差、各來源佔比等指標由後端**確定性計算**並快取,與 LLM 脫鉤 → 即使 AI 全降級,效率落差圖仍可顯示;只有敘述文字會缺省。體現「數據保證可用、生成盡力而為」。
+7. **BI 設計:兩段式時間鏡頭**:即時營運概覽(近 14 天,隨檢視截止日變動)與月度策略建議(近 30 天,脫鉤)刻意分開,呼應「短線洗牌 vs 月度預算分配」本就不同尺度;洞察輸入再加「近 30 vs 前 30」對比與效率落差,讓建議理由引用真實變化而非靜態描述。
+8. **AI 快取**:洞察於 ETL 後一次算好存 DB,`GET /insights` 直接讀 → Dashboard 秒開、省 API 額度、斷網也能 demo。
+9. **全端 + DevOps**:本機 `docker compose up --build` 一鍵起 db / backend / frontend;雲端三方分離部署 — 前端 Cloudflare Pages、後端 Render(自動跑 migration)、資料庫 Neon serverless PostgreSQL。
+10. **正確性測試**:pytest 精選關鍵測試 — 清洗、KPI(含分母為零)、冪等性、洞察前後期視窗計算,堵住「你怎麼確保正確性」。
