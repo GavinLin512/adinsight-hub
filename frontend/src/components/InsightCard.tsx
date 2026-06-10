@@ -18,6 +18,12 @@ export default function InsightCard({ insights }: { insights: InsightOut | null 
   return (
     <div className="space-y-3">
       {insights.error && <p className="whitespace-pre-line text-xs text-amber-600">注意:{insights.error}</p>}
+      {insights.summary && (
+        <div className="rounded-lg border-l-4 border-primary bg-muted/40 p-4">
+          <div className="mb-1 text-xs font-semibold text-muted-foreground">整體建議</div>
+          <p className="text-sm leading-relaxed">{insights.summary}</p>
+        </div>
+      )}
       {insights.raw_text && (
         <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 text-xs">{insights.raw_text}</pre>
       )}

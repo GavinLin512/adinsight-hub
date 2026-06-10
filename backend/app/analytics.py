@@ -132,6 +132,96 @@ def compute_timeseries(db: Session, end_date: date_type | None = None) -> list[d
     return out
 
 
+def _window_by_source(db: Session, start: date_type, end: date_type) -> dict[str, dict]:
+    """取指定日期區間各來源彙總,回傳 {source: kpi_block}。重用 compute_kpis。"""
+    q = db.query(
+        UnifiedCampaign.source,
+        UnifiedCampaign.impressions,
+        UnifiedCampaign.clicks,
+        UnifiedCampaign.cost_twd,
+        UnifiedCampaign.conversions,
+        UnifiedCampaign.revenue_twd,
+    ).filter(UnifiedCampaign.date >= start, UnifiedCampaign.date <= end)
+    rows = q.all()
+    records = [
+        {
+            "source": r.source,
+            "impressions": r.impressions,
+            "clicks": r.clicks,
+            "cost_twd": float(r.cost_twd),
+            "conversions": r.conversions,
+            "revenue_twd": float(r.revenue_twd),
+        }
+        for r in rows
+    ]
+    result = compute_kpis(records)
+    return {item["source"]: item for item in result["by_source"]}
+
+
+def compute_insight_summary(db: Session) -> dict:
+    """洞察專用彙總(不動 compute_summary):以 max_date 為錨點,算近30/前30兩視窗。
+
+    每來源輸出:
+      current       近30天 KPI(roas/cpa/ctr/cost_twd/revenue_twd/conversions/budget_share)
+      revenue_share 近30天營收佔比
+      efficiency_gap revenue_share - budget_share(正=多賺少花,負=多花少賺)
+      prior         前30天 KPI(可為 null)
+      delta_pct     {roas/cost_twd/revenue_twd/conversions} 百分比變化(prior=null 時各為 null)
+    """
+    max_date = db.query(func.max(UnifiedCampaign.date)).scalar()
+    if max_date is None:
+        return {"by_source": [], "max_date": None}
+
+    from datetime import timedelta
+    cur_start = max_date - timedelta(days=29)
+    cur_end = max_date
+    pri_start = max_date - timedelta(days=59)
+    pri_end = max_date - timedelta(days=30)
+
+    cur_map = _window_by_source(db, cur_start, cur_end)
+    pri_map = _window_by_source(db, pri_start, pri_end)
+
+    # 近30天總營收,算 revenue_share 用
+    total_revenue = sum(v["revenue_twd"] for v in cur_map.values())
+
+    _DELTA_FIELDS = ("roas", "cost_twd", "revenue_twd", "conversions")
+
+    by_source = []
+    for source in sorted(cur_map):
+        cur = cur_map[source]
+        pri = pri_map.get(source)
+
+        # revenue_share / efficiency_gap
+        rev_share = _round(_safe_div(cur["revenue_twd"], total_revenue), 4) if total_revenue else None
+        eff_gap = _round((rev_share - cur["budget_share"]), 4) if (
+            rev_share is not None and cur["budget_share"] is not None
+        ) else None
+
+        # delta_pct:前期無花費(cost=0 / 無記錄)視為 prior=null
+        prior_valid = pri is not None and (pri.get("cost_twd") or 0) > 0
+        delta_pct: dict = {}
+        for f in _DELTA_FIELDS:
+            if not prior_valid or pri.get(f) is None:
+                delta_pct[f] = None
+            else:
+                prev_val = float(pri[f])
+                if prev_val == 0:
+                    delta_pct[f] = None
+                else:
+                    delta_pct[f] = _round((float(cur.get(f) or 0) - prev_val) / prev_val * 100)
+
+        by_source.append({
+            "source": source,
+            "current": cur,
+            "revenue_share": rev_share,
+            "efficiency_gap": eff_gap,
+            "prior": pri if prior_valid else None,
+            "delta_pct": delta_pct,
+        })
+
+    return {"by_source": by_source, "max_date": str(max_date)}
+
+
 def compute_timeseries_by_source(db: Session, end_date: date_type | None = None) -> list[dict]:
     """每日 × 各來源彙總(花費/收入/ROAS):供各來源每日 ROAS 折線圖。"""
     q = db.query(
