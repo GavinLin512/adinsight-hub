@@ -30,7 +30,7 @@ export default function SourceRoasTrend({ data, days = 14 }: { data: SourceTimes
   }
 
   return (
-    <ChartContainer config={sourceChartConfig} className="h-[300px] w-full">
+    <ChartContainer config={sourceChartConfig} className="aspect-auto h-[300px] w-full">
       <LineChart data={series} margin={{ top: 8, right: 12, left: 4 }}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />

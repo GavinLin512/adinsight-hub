@@ -13,7 +13,7 @@ export default function RoasChart({ bySource }: { bySource: SourceKpi[] }) {
   }
 
   return (
-    <ChartContainer config={sourceChartConfig} className="h-[280px] w-full">
+    <ChartContainer config={sourceChartConfig} className="aspect-auto h-[280px] w-full">
       <BarChart data={data} margin={{ top: 8 }}>
         <CartesianGrid vertical={false} />
         <XAxis
@@ -23,7 +23,7 @@ export default function RoasChart({ bySource }: { bySource: SourceKpi[] }) {
           tickMargin={8}
           tickFormatter={(v: string) => sourceChartConfig[v as keyof typeof sourceChartConfig]?.label ?? v}
         />
-        <YAxis tickLine={false} axisLine={false} width={32} />
+        <YAxis tickLine={false} axisLine={false} width={44} />
         <ChartTooltip content={<ChartTooltipContent formatter={(v) => `${v}x`} />} />
         <Bar dataKey="roas" radius={6}>
           {data.map((d) => (

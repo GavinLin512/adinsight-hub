@@ -21,7 +21,7 @@ export default function StrategyKpiChart({ bySource }: { bySource: SourceKpi[] }
 
   return (
     <div>
-      <ChartContainer config={strategyChartConfig} className="h-[280px] w-full">
+      <ChartContainer config={strategyChartConfig} className="aspect-auto h-[280px] w-full">
         <BarChart data={data} margin={{ top: 8, right: 24 }}>
           <CartesianGrid vertical={false} />
           <XAxis dataKey="source" tickLine={false} axisLine={false} tickMargin={8} />
@@ -29,7 +29,7 @@ export default function StrategyKpiChart({ bySource }: { bySource: SourceKpi[] }
             yAxisId="left"
             tickLine={false}
             axisLine={false}
-            width={36}
+            width={48}
             tickFormatter={(v: number) => `${v}x`}
           />
           <YAxis

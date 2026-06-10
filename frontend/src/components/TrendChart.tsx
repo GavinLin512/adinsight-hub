@@ -18,7 +18,7 @@ export default function TrendChart({ data, days = 14 }: { data: TimeseriesPoint[
   }
 
   return (
-    <ChartContainer config={trendChartConfig} className="h-[300px] w-full">
+    <ChartContainer config={trendChartConfig} className="aspect-auto h-[300px] w-full">
       <LineChart data={series} margin={{ top: 8, right: 12, left: 4 }}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />

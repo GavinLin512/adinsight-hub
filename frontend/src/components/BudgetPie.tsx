@@ -15,7 +15,7 @@ export default function BudgetPie({ bySource }: { bySource: SourceKpi[] }) {
   }
 
   return (
-    <ChartContainer config={sourceChartConfig} className="h-[280px] w-full">
+    <ChartContainer config={sourceChartConfig} className="aspect-auto h-[280px] w-full">
       <PieChart>
         <ChartTooltip
           content={<ChartTooltipContent nameKey="source" formatter={(v) => `NT$${Number(v).toLocaleString()}`} />}

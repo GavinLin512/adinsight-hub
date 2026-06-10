@@ -25,7 +25,7 @@ export default function EfficiencyGapChart({ metrics }: { metrics: InsightMetric
 
   return (
     <div>
-      <ChartContainer config={gapChartConfig} className="h-[220px] w-full">
+      <ChartContainer config={gapChartConfig} className="aspect-auto h-[220px] w-full">
         <BarChart data={data} layout="vertical" margin={{ top: 8, right: 32, left: 8 }}>
           <XAxis
             type="number"

@@ -30,7 +30,7 @@ const KPI_TIPS: Record<string, string> = {
 
 function Kpi({ label, value, tip }: { label: string; value: string; tip?: string }) {
   return (
-    <div className="px-5 py-4">
+    <div className="px-4 py-3 md:px-5 md:py-4">
       <div className="flex items-center gap-1 text-xs text-muted-foreground">
         {label}
         {tip && (
@@ -48,7 +48,7 @@ function Kpi({ label, value, tip }: { label: string; value: string; tip?: string
           </Tooltip>
         )}
       </div>
-      <div className="mt-1.5 text-3xl font-semibold tabular-nums tracking-tight">{value}</div>
+      <div className="mt-1.5 text-xl font-semibold tabular-nums tracking-tight md:text-3xl">{value}</div>
     </div>
   )
 }
@@ -68,7 +68,7 @@ function DashboardSkeleton() {
     <div className="animate-pulse space-y-6" aria-label="載入中">
       <div className="h-28 rounded-xl border border-border/70 bg-card" />
       <div className="h-72 rounded-xl border border-border/70 bg-card" />
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="h-64 rounded-xl border border-border/70 bg-card" />
         <div className="h-64 rounded-xl border border-border/70 bg-card" />
       </div>
@@ -221,7 +221,7 @@ export default function PublicDashboard() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <Card>
               <CardHeader><CardTitle>各來源 ROAS(近 {WINDOW_DAYS} 天平均)</CardTitle></CardHeader>
               <CardContent>

@@ -33,9 +33,15 @@
     --chart-5: 12 55% 52%;
   }
 
-  /* 整體放大:Tailwind 字體與間距皆以 rem 計,調根字級即等比放大全站 */
+  /* 整體放大:Tailwind 字體與間距皆以 rem 計,調根字級即等比放大全站
+     手機 18px、桌機(≥768px)20px,避免小螢幕被等比放大撐爆 */
   html {
-    font-size: 20px;
+    font-size: 18px;
+  }
+  @media (min-width: 768px) {
+    html {
+      font-size: 20px;
+    }
   }
   * {
     @apply border-border;

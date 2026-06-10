@@ -36,7 +36,7 @@ export default function Layout() {
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-1.5 px-4 py-3 sm:px-6">
           <Link to="/" className="group flex items-center gap-2.5">
             <BrandMark />
             <span className="text-lg font-semibold tracking-tight">
@@ -50,11 +50,11 @@ export default function Layout() {
           </nav>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-16 pt-8">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-16 pt-8 sm:px-6">
         <Outlet />
       </main>
       <footer className="border-t border-border/70">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-6 py-5 text-xs text-muted-foreground">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-5 text-xs text-muted-foreground sm:px-6">
           <span>AdInsight Hub · 跨渠道行銷成效平台</span>
           <span>資料來源:Google Ads / Meta Ads / GA4 · 金額一律以 TWD 呈現</span>
         </div>
