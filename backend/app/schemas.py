@@ -63,6 +63,14 @@ class TimeseriesPoint(BaseModel):
     conversions: int
 
 
+class SourceTimeseriesPoint(BaseModel):
+    date: date_type
+    source: str
+    cost_twd: float
+    revenue_twd: float
+    roas: float | None
+
+
 class EtlRunOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

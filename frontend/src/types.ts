@@ -29,6 +29,14 @@ export interface TimeseriesPoint {
   conversions: number
 }
 
+export interface SourceTimeseriesPoint {
+  date: string
+  source: string
+  cost_twd: number
+  revenue_twd: number
+  roas: number | null
+}
+
 export interface InsightItem {
   source: string
   action: string

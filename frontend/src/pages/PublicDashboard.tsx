@@ -2,17 +2,18 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Info } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import DatePicker from '@/components/DatePicker'
 import BudgetPie from '@/components/BudgetPie'
 import InsightCard from '@/components/InsightCard'
 import RoasChart from '@/components/RoasChart'
+import SourceRoasTrend from '@/components/SourceRoasTrend'
 import TrendChart from '@/components/TrendChart'
-import { getInsights, getSummary, getTimeseries } from '@/api'
-import { lastNDates } from '@/lib/dates'
-import type { AnalyticsSummary, InsightOut, TimeseriesPoint } from '@/types'
+import { getInsights, getSummary, getTimeseries, getTimeseriesBySource } from '@/api'
+import { fmtDate } from '@/lib/dates'
+import type { AnalyticsSummary, InsightOut, SourceTimeseriesPoint, TimeseriesPoint } from '@/types'
 
-const DATES = lastNDates(7)
+const WINDOW_DAYS = 14 // 全儀表板統一視窗:截止日往回 14 天
 
 const KPI_TIPS: Record<string, string> = {
   ROAS:
@@ -53,18 +54,22 @@ function Kpi({ label, value, tip }: { label: string; value: string; tip?: string
 export default function PublicDashboard() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [timeseries, setTimeseries] = useState<TimeseriesPoint[]>([])
+  const [sourceTrend, setSourceTrend] = useState<SourceTimeseriesPoint[]>([])
   const [insights, setInsights] = useState<InsightOut | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [viewDate, setViewDate] = useState(DATES[0].iso)
+  const [viewDate, setViewDate] = useState(fmtDate(new Date()))
 
   async function load(endDate: string) {
     setLoading(true)
     setError(null)
     try {
-      const [s, ts, i] = await Promise.all([getSummary(endDate), getTimeseries(endDate), getInsights()])
+      const [s, ts, sts, i] = await Promise.all([
+        getSummary(endDate, WINDOW_DAYS), getTimeseries(endDate), getTimeseriesBySource(endDate), getInsights(),
+      ])
       setSummary(s)
       setTimeseries(ts)
+      setSourceTrend(sts)
       setInsights(i)
     } catch {
       setError('無法連到後端 API,請確認後端已啟動。')
@@ -90,15 +95,13 @@ export default function PublicDashboard() {
     <TooltipProvider delayDuration={150}>
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">行銷成效儀表板</h1>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">檢視截止日</span>
-          <Select value={viewDate} onValueChange={onDateChange}>
-            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {DATES.map((d) => <SelectItem key={d.iso} value={d.iso}>{d.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+        <div>
+          <h1 className="text-2xl font-semibold">行銷成效儀表板</h1>
+          <p className="text-xs text-muted-foreground">所有數據為「報表檢視截止日」往回 {WINDOW_DAYS} 天</p>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          報表檢視截止日
+          <DatePicker value={viewDate} onChange={onDateChange} max={fmtDate(new Date())} />
         </div>
       </div>
 
@@ -125,17 +128,25 @@ export default function PublicDashboard() {
           <Card>
             <CardHeader><CardTitle>每日花費 / 收入趨勢(最近 14 天)</CardTitle></CardHeader>
             <CardContent>
-              <TrendChart data={timeseries} />
+              <TrendChart data={timeseries} days={WINDOW_DAYS} />
               <p className="mt-2 text-xs text-muted-foreground">切換右上「檢視截止日」,趨勢圖會即時變化。</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>各來源每日 ROAS(最近 14 天)</CardTitle></CardHeader>
+            <CardContent>
+              <SourceRoasTrend data={sourceTrend} days={WINDOW_DAYS} />
+              <p className="mt-2 text-xs text-muted-foreground">每日波動下,「哪家最高」會洗牌——不固定同一家。</p>
             </CardContent>
           </Card>
 
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
-              <CardHeader><CardTitle>各來源 ROAS</CardTitle></CardHeader>
+              <CardHeader><CardTitle>各來源 ROAS(近 {WINDOW_DAYS} 天平均)</CardTitle></CardHeader>
               <CardContent>
                 <RoasChart bySource={summary.by_source} />
-                <p className="mt-2 text-xs text-muted-foreground">ROAS 為比例,加入更多相似日子比例幾乎不變,屬正常。</p>
+                <p className="mt-2 text-xs text-muted-foreground">平均後各來源有明顯差距(spread);每日洗牌見上圖。</p>
               </CardContent>
             </Card>
             <Card>

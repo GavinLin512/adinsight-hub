@@ -43,16 +43,39 @@ def _date_window(days: int, as_of: date | None = None) -> list[date]:
     return [anchor - timedelta(days=offset) for offset in range(days)]
 
 
-def _base_metrics(rng: random.Random) -> dict:
-    impressions = rng.randint(2_000, 60_000)
-    ctr = rng.uniform(0.005, 0.06)
+# 各來源的「成效體質」(刻意不同,讓整體 ROAS 與預算分配拉開幅度,亦更貼近真實)
+# imp=每日曝光範圍、ctr=點擊率、cvr=轉換率、cpc=每點擊成本(TWD)、aov=客單價(TWD)
+# 整體近似平均 ROAS:google~4.6、ga4~3.4、meta~2.7(有 spread 但不懸殊)
+SOURCE_PROFILE = {
+    "google": {"imp": (20_000, 80_000), "ctr": (0.030, 0.060), "cvr": (0.038, 0.058), "cpc": (12, 17), "aov": (950, 1400)},
+    "ga4":    {"imp": (5_000, 20_000), "ctr": (0.020, 0.050), "cvr": (0.035, 0.055), "cpc": (13, 18), "aov": (880, 1250)},
+    "meta":   {"imp": (15_000, 50_000), "ctr": (0.008, 0.020), "cvr": (0.028, 0.048), "cpc": (12, 18), "aov": (780, 1100)},
+}
+
+
+def _daily_factor(source: str, d: date) -> float:
+    """每來源每天「共用」的成效波動(像當天大盤行情)。
+
+    讓每日 ROAS 在平均值上下大幅擺動且各來源範圍重疊 → 每天「哪家最高」會洗牌;
+    因仍以 (source, date) 為種子,故維持冪等(同一天重跑相同)。
+    """
+    key = f"{source}:{d.isoformat()}:daily".encode()
+    seed = int(hashlib.sha256(key).hexdigest(), 16) % (2**32)
+    return random.Random(seed).uniform(0.45, 1.85)
+
+
+def _base_metrics(rng: random.Random, source: str, d: date) -> dict:
+    p = SOURCE_PROFILE[source]
+    impressions = rng.randint(*p["imp"])
+    ctr = rng.uniform(*p["ctr"])
     clicks = max(1, int(impressions * ctr))
-    cvr = rng.uniform(0.01, 0.10)
+    cvr = rng.uniform(*p["cvr"])
     conversions = max(0, int(clicks * cvr))
-    cpc_twd = rng.uniform(4.0, 35.0)
+    cpc_twd = rng.uniform(*p["cpc"])
     cost_twd = round(clicks * cpc_twd, 2)
-    aov_twd = rng.uniform(400.0, 1500.0)
-    revenue_twd = round(conversions * aov_twd, 2)
+    aov_twd = rng.uniform(*p["aov"])
+    # 當天該來源的共用波動套在營收上 → 每日 ROAS 擺動、每日贏家洗牌
+    revenue_twd = round(conversions * aov_twd * _daily_factor(source, d), 2)
     return {
         "impressions": impressions,
         "clicks": clicks,
@@ -67,7 +90,7 @@ def generate_google(days: int, as_of: date | None = None) -> list[dict]:
     rows = []
     for d in _date_window(days, as_of):
         for camp in CAMPAIGNS["google"]:
-            m = _base_metrics(_seeded_rng("google", camp, d))
+            m = _base_metrics(_seeded_rng("google", camp, d), "google", d)
             rows.append({
                 "campaign": camp,
                 "day": d.strftime("%Y-%m-%d"),
@@ -86,7 +109,7 @@ def generate_meta(days: int, as_of: date | None = None) -> list[dict]:
     rows = []
     for d in _date_window(days, as_of):
         for camp in CAMPAIGNS["meta"]:
-            m = _base_metrics(_seeded_rng("meta", camp, d))
+            m = _base_metrics(_seeded_rng("meta", camp, d), "meta", d)
             rows.append({
                 "ad_set_name": camp,
                 "date": d.strftime("%d/%m/%Y"),
@@ -104,7 +127,7 @@ def generate_ga4(days: int, as_of: date | None = None) -> list[dict]:
     rows = []
     for d in _date_window(days, as_of):
         for camp in CAMPAIGNS["ga4"]:
-            m = _base_metrics(_seeded_rng("ga4", camp, d))
+            m = _base_metrics(_seeded_rng("ga4", camp, d), "ga4", d)
             rows.append({
                 "session_campaign": camp,
                 "event_date": d.strftime("%Y%m%d"),

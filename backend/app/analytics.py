@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date as date_type
+from datetime import timedelta
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -62,8 +63,16 @@ def compute_kpis(records: list[dict]) -> dict:
     return {"overall": _kpi_block(overall, total_cost), "by_source": by_source}
 
 
-def compute_summary(db: Session, end_date: date_type | None = None) -> dict:
-    """由 unified_campaigns 計算整體 KPI 摘要;end_date 可只看該日(含)以前的資料。"""
+def compute_summary(
+    db: Session,
+    end_date: date_type | None = None,
+    days: int | None = None,
+) -> dict:
+    """由 unified_campaigns 計算整體 KPI 摘要。
+
+    end_date:只看該日(含)以前。
+    days:只看「最新資料日(≤ end_date)往回 days 天」的視窗(與趨勢圖的最近 N 天對齊)。
+    """
     q = db.query(
         UnifiedCampaign.source,
         UnifiedCampaign.impressions,
@@ -72,7 +81,16 @@ def compute_summary(db: Session, end_date: date_type | None = None) -> dict:
         UnifiedCampaign.conversions,
         UnifiedCampaign.revenue_twd,
     )
-    if end_date:
+    if days:
+        max_q = db.query(func.max(UnifiedCampaign.date))
+        if end_date:
+            max_q = max_q.filter(UnifiedCampaign.date <= end_date)
+        max_date = max_q.scalar()
+        if max_date is None:
+            return compute_kpis([])  # 無資料
+        start = max_date - timedelta(days=days - 1)
+        q = q.filter(UnifiedCampaign.date >= start, UnifiedCampaign.date <= max_date)
+    elif end_date:
         q = q.filter(UnifiedCampaign.date <= end_date)
     rows = q.all()
     records = [
@@ -110,5 +128,34 @@ def compute_timeseries(db: Session, end_date: date_type | None = None) -> list[d
             "revenue_twd": round(rev, 2),
             "roas": round(rev / cost, 2) if cost else None,
             "conversions": int(conv or 0),
+        })
+    return out
+
+
+def compute_timeseries_by_source(db: Session, end_date: date_type | None = None) -> list[dict]:
+    """每日 × 各來源彙總(花費/收入/ROAS):供各來源每日 ROAS 折線圖。"""
+    q = db.query(
+        UnifiedCampaign.date,
+        UnifiedCampaign.source,
+        func.sum(UnifiedCampaign.cost_twd),
+        func.sum(UnifiedCampaign.revenue_twd),
+    )
+    if end_date:
+        q = q.filter(UnifiedCampaign.date <= end_date)
+    rows = (
+        q.group_by(UnifiedCampaign.date, UnifiedCampaign.source)
+        .order_by(UnifiedCampaign.date, UnifiedCampaign.source)
+        .all()
+    )
+    out = []
+    for d, source, cost, rev in rows:
+        cost = float(cost or 0)
+        rev = float(rev or 0)
+        out.append({
+            "date": d,
+            "source": source,
+            "cost_twd": round(cost, 2),
+            "revenue_twd": round(rev, 2),
+            "roas": round(rev / cost, 2) if cost else None,
         })
     return out

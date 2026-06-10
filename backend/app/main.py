@@ -8,7 +8,7 @@ from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from app import schemas
-from app.analytics import compute_summary, compute_timeseries
+from app.analytics import compute_summary, compute_timeseries, compute_timeseries_by_source
 from app.config import settings
 from app.db import get_db, wait_for_db
 from app.etl.pipeline import run_etl
@@ -163,10 +163,11 @@ def list_campaigns(
 @app.get("/analytics/summary", response_model=schemas.AnalyticsSummary)
 def analytics_summary(
     end_date: date_type | None = Query(default=None, description="只看此日(含)以前的資料 YYYY-MM-DD"),
+    days: int | None = Query(default=None, ge=1, le=365, description="只看最新資料日往回 N 天(與趨勢圖對齊)"),
     db: Session = Depends(get_db),
 ):
     """回傳整體與分來源的行銷 KPI。"""
-    return compute_summary(db, end_date)
+    return compute_summary(db, end_date, days)
 
 
 @app.get("/analytics/timeseries", response_model=list[schemas.TimeseriesPoint])
@@ -176,6 +177,15 @@ def analytics_timeseries(
 ):
     """每日彙總趨勢(date 維度)。"""
     return compute_timeseries(db, end_date)
+
+
+@app.get("/analytics/timeseries-by-source", response_model=list[schemas.SourceTimeseriesPoint])
+def analytics_timeseries_by_source(
+    end_date: date_type | None = Query(default=None, description="只看此日(含)以前的資料 YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+):
+    """每日 × 各來源趨勢(供各來源每日 ROAS 折線圖)。"""
+    return compute_timeseries_by_source(db, end_date)
 
 
 @app.get("/insights", response_model=schemas.InsightOut)

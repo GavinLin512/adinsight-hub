@@ -7,9 +7,11 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import DatePicker from '@/components/DatePicker'
 import RawUnifiedPanel from '@/components/RawUnifiedPanel'
 import SyncStatus from '@/components/SyncStatus'
 import { getEtlRuns, getRawOverview, resetData, runEtl } from '@/api'
+import { fmtDate } from '@/lib/dates'
 import type { EtlRun, RawOverview } from '@/types'
 
 // 隨機挑 1~3 個來源失敗(使用者不指定)
@@ -23,6 +25,7 @@ export default function AdminConsole() {
   const [latestRun, setLatestRun] = useState<EtlRun | null>(null)
   const [rawOverview, setRawOverview] = useState<RawOverview | null>(null)
   const [running, setRunning] = useState(false)
+  const [runDate, setRunDate] = useState(fmtDate(new Date())) // 資料日期(預設今天)
 
   async function load() {
     try {
@@ -41,12 +44,13 @@ export default function AdminConsole() {
   async function handleRun(failSources: string[] = []) {
     setRunning(true)
     try {
-      const result = await runEtl(failSources)
+      const result = await runEtl(failSources, runDate)
       const failed = Object.entries(result.sources || {})
         .filter(([, v]) => v.status === 'failed')
         .map(([s]) => s)
-      if (failed.length) toast.warning(`ETL 完成(${result.run_status}):失敗來源 ${failed.join(', ')}`)
-      else toast.success('ETL 完成:全部來源成功')
+      const tag = `資料日期 ${runDate}`
+      if (failed.length) toast.warning(`ETL 完成(${result.run_status},${tag}):失敗來源 ${failed.join(', ')}`)
+      else toast.success(`ETL 完成(${tag}):全部來源成功`)
       await load()
     } catch {
       toast.error('ETL 執行失敗。')
@@ -75,11 +79,17 @@ export default function AdminConsole() {
       <Card>
         <CardHeader>
           <CardTitle>ETL 操作</CardTitle>
-          <CardDescription>執行資料同步,或隨機模擬來源失敗以測試容錯。</CardDescription>
+          <CardDescription>
+            指定「資料日期」執行同步——選不同日期可 demo 不同日期資料不同。亦可隨機模擬來源失敗測試容錯。
+          </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
+        <CardContent className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 text-sm">
+            資料同步日(as-of)
+            <DatePicker value={runDate} onChange={setRunDate} max={fmtDate(new Date())} disabled={running} />
+          </div>
           <Button onClick={() => handleRun([])} disabled={running}>
-            {running ? '執行中…' : '執行 ETL'}
+            {running ? '執行中…' : '以此日期執行 ETL'}
           </Button>
           <Button variant="destructive" onClick={() => handleRun(pickRandomFailures())} disabled={running}>
             隨機模擬來源失敗並執行

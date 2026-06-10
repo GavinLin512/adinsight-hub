@@ -1,17 +1,7 @@
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
 
+// 不覆寫 toast 底色,讓 Layout 傳入的 richColors 生效:
+// success → 綠、error → 紅、warning → 黃
 export function Toaster(props: ToasterProps) {
-  return (
-    <Sonner
-      className="toaster group"
-      toastOptions={{
-        classNames: {
-          toast:
-            'group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg',
-          description: 'group-[.toast]:text-muted-foreground',
-        },
-      }}
-      {...props}
-    />
-  )
+  return <Sonner className="toaster group" {...props} />
 }

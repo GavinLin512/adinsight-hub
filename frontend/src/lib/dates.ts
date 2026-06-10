@@ -11,6 +11,14 @@ export function fmtDate(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
+// 'YYYY-MM-DD' → 本地 Date(避免 new Date('YYYY-MM-DD') 以 UTC 解析造成跨日偏移)
+export function parseDate(iso: string): Date | undefined {
+  if (!iso) return undefined
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return undefined
+  return new Date(y, m - 1, d)
+}
+
 // 最近 n 天(今天、1 天前 …),供檢視截止日選單
 export function lastNDates(n: number): DateOption[] {
   const out: DateOption[] = []
