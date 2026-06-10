@@ -31,7 +31,8 @@ const KPI_TIPS: Record<string, string> = {
 function KpiTip({ label, tip }: { label: string; tip: string }) {
   const [open, setOpen] = useState(false)
   return (
-    <Tooltip open={open} onOpenChange={setOpen}>
+    // open 完全由我們控制,不傳 onOpenChange,避免 Radix 的 hover 事件在觸控時閃爍
+    <Tooltip open={open}>
       <TooltipTrigger asChild>
         <button
           type="button"
