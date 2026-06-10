@@ -1,4 +1,5 @@
 import { Bar, BarChart, Cell, ReferenceLine, XAxis, YAxis } from 'recharts'
+import ChartNote from '@/components/ChartNote'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { sourceChartConfig } from '@/lib/chart-config'
 import type { ChartConfig } from '@/components/ui/chart'
@@ -48,11 +49,10 @@ export default function EfficiencyGapChart({ metrics }: { metrics: InsightMetric
           </Bar>
         </BarChart>
       </ChartContainer>
-      <p className="mt-1 text-xs text-muted-foreground">
-        效率落差 = 營收佔比 − 預算佔比;
-        <span className="text-primary">正(青綠)代表多賺少花、該加</span>、
-        <span className="text-destructive">負(赤陶)代表多花少賺、該減</span>
-      </p>
+      <ChartNote formula="效率落差 = 營收佔比 − 預算佔比(以百分點 pp 呈現)">
+        <span className="text-primary">正(墨綠)代表多賺少花、該加</span>、
+        <span className="text-destructive">負(赤紅)代表多花少賺、該減</span>
+      </ChartNote>
     </div>
   )
 }

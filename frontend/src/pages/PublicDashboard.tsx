@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import DatePicker from '@/components/DatePicker'
 import BudgetPie from '@/components/BudgetPie'
+import ChartNote from '@/components/ChartNote'
 import EfficiencyGapChart from '@/components/EfficiencyGapChart'
 import InsightCard from '@/components/InsightCard'
 import RoasChart from '@/components/RoasChart'
@@ -206,7 +207,7 @@ export default function PublicDashboard() {
             <CardHeader><CardTitle>每日花費 / 收入趨勢(最近 14 天)</CardTitle></CardHeader>
             <CardContent>
               <TrendChart data={timeseries} days={WINDOW_DAYS} />
-              <p className="mt-2 text-xs text-muted-foreground">切換右上「檢視截止日」,趨勢圖會即時變化。</p>
+              <ChartNote>切換右上「檢視截止日」,趨勢圖會即時變化。</ChartNote>
             </CardContent>
           </Card>
 
@@ -214,7 +215,9 @@ export default function PublicDashboard() {
             <CardHeader><CardTitle>各來源每日 ROAS(最近 14 天)</CardTitle></CardHeader>
             <CardContent>
               <SourceRoasTrend data={sourceTrend} days={WINDOW_DAYS} />
-              <p className="mt-2 text-xs text-muted-foreground">每日波動下,「哪家最高」會洗牌——不固定同一家。</p>
+              <ChartNote formula="ROAS = 當日營收 ÷ 當日花費">
+                每日波動下,「哪家最高」會洗牌——不固定同一家。
+              </ChartNote>
             </CardContent>
           </Card>
 
@@ -223,12 +226,19 @@ export default function PublicDashboard() {
               <CardHeader><CardTitle>各來源 ROAS(近 {WINDOW_DAYS} 天平均)</CardTitle></CardHeader>
               <CardContent>
                 <RoasChart bySource={summary.by_source} />
-                <p className="mt-2 text-xs text-muted-foreground">平均後各來源有明顯差距(spread);每日洗牌見上圖。</p>
+                <ChartNote formula={`ROAS = 近 ${WINDOW_DAYS} 天營收加總 ÷ 花費加總`}>
+                  平均後各來源有明顯差距(spread);每日洗牌見上圖。
+                </ChartNote>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle>預算分配</CardTitle></CardHeader>
-              <CardContent><BudgetPie bySource={summary.by_source} /></CardContent>
+              <CardHeader><CardTitle>預算分配(近 {WINDOW_DAYS} 天)</CardTitle></CardHeader>
+              <CardContent>
+                <BudgetPie bySource={summary.by_source} />
+                <ChartNote formula="預算佔比 = 各來源花費 ÷ 總花費">
+                  各來源近 {WINDOW_DAYS} 天花費佔總花費的比例。
+                </ChartNote>
+              </CardContent>
             </Card>
           </div>
 
@@ -241,15 +251,19 @@ export default function PublicDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <InsightCard insights={insights} section="summary" />
               <div className="space-y-1">
                 <div className="text-sm font-medium">各來源 ROAS / CPA</div>
                 <StrategyKpiChart bySource={strategySummary?.by_source ?? []} />
+                <ChartNote formula="ROAS = 營收 ÷ 花費;CPA = 花費 ÷ 轉換數">
+                  ROAS 越高越好、CPA 越低越省;以近 30 天彙總計算。
+                </ChartNote>
               </div>
               <div className="space-y-1">
                 <div className="text-sm font-medium">預算效率落差(誰該加、誰該減)</div>
                 <EfficiencyGapChart metrics={insights?.metrics ?? []} />
               </div>
-              <InsightCard insights={insights} />
+              <InsightCard insights={insights} section="details" />
             </CardContent>
           </Card>
         </>

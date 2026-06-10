@@ -66,7 +66,7 @@ export default function RawUnifiedPanel({ data }: { data: RawOverview | null }) 
             {(['google', 'meta', 'ga4'] as SourceKey[]).map((s) => (
               <TableHead key={s}>
                 {SOURCE_META[s].label}
-                <div className="text-[11px] font-normal text-muted-foreground">{SOURCE_META[s].note}</div>
+                <div className="text-xs font-normal text-muted-foreground">{SOURCE_META[s].note}</div>
               </TableHead>
             ))}
           </TableRow>
@@ -76,7 +76,7 @@ export default function RawUnifiedPanel({ data }: { data: RawOverview | null }) 
             <TableRow key={row.unified}>
               <TableCell className="whitespace-nowrap bg-muted/30 font-medium">
                 {row.unified}
-                <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">{row.zh}</span>
+                <span className="mt-0.5 block text-xs font-normal text-muted-foreground">{row.zh}</span>
               </TableCell>
               <TableCell><Cell field={row.google} payload={sample.google} /></TableCell>
               <TableCell>
@@ -109,7 +109,7 @@ export default function RawUnifiedPanel({ data }: { data: RawOverview | null }) 
           nums={
             <>
               <span><b className="text-lg text-primary">{uni.total_rows.toLocaleString()}</b> 筆</span>
-              <span className="text-muted-foreground">{uni.date_min} ~ {uni.date_max}</span>
+              <span className="text-muted-foreground pt-1">{uni.date_min} ~ {uni.date_max}</span>
             </>
           }
           sub="重跑筆數不變(唯一鍵冪等)"

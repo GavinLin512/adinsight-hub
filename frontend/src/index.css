@@ -35,7 +35,7 @@
 
   /* 整體放大:Tailwind 字體與間距皆以 rem 計,調根字級即等比放大全站 */
   html {
-    font-size: 18px;
+    font-size: 20px;
   }
   * {
     @apply border-border;
