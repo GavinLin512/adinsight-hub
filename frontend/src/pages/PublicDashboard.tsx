@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import DatePicker from '@/components/DatePicker'
 import BudgetPie from '@/components/BudgetPie'
+import EfficiencyGapChart from '@/components/EfficiencyGapChart'
 import InsightCard from '@/components/InsightCard'
 import RoasChart from '@/components/RoasChart'
 import SourceRoasTrend from '@/components/SourceRoasTrend'
@@ -215,7 +216,14 @@ export default function PublicDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <StrategyKpiChart bySource={strategySummary?.by_source ?? []} />
+              <div className="space-y-1">
+                <div className="text-sm font-medium">各來源 ROAS / CPA</div>
+                <StrategyKpiChart bySource={strategySummary?.by_source ?? []} />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm font-medium">預算效率落差(誰該加、誰該減)</div>
+                <EfficiencyGapChart metrics={insights?.metrics ?? []} />
+              </div>
               <InsightCard insights={insights} />
             </CardContent>
           </Card>

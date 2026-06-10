@@ -48,10 +48,21 @@ class InsightItem(BaseModel):
     reason: str
 
 
+class InsightMetric(BaseModel):
+    """洞察視窗(近 30 天)各來源的確定性數字,供前端策略圖表使用。"""
+    source: str
+    efficiency_gap: float | None = None   # 營收佔比 − 預算佔比(正=該加、負=該減)
+    revenue_share: float | None = None
+    budget_share: float | None = None
+    roas_delta_pct: float | None = None   # ROAS 近 30 vs 前 30 變化%
+
+
 class InsightOut(BaseModel):
     generated_at: datetime | None = None
     data_date: date_type | None = None  # 洞察彙總視窗的資料錨點(max unified.date),非牆鐘時間
+    summary: str | None = None          # 整體策略摘要(LLM 綜合三來源)
     items: list[InsightItem] = []
+    metrics: list[InsightMetric] = []   # 各來源效率落差/前期變化(確定性,與 LLM 成敗無關)
     raw_text: str | None = None
     error: str | None = None
 

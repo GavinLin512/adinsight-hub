@@ -43,10 +43,20 @@ export interface InsightItem {
   reason: string
 }
 
+export interface InsightMetric {
+  source: string
+  efficiency_gap: number | null // 營收佔比 − 預算佔比(正=該加、負=該減)
+  revenue_share: number | null
+  budget_share: number | null
+  roas_delta_pct: number | null // ROAS 近 30 vs 前 30 變化%
+}
+
 export interface InsightOut {
   generated_at: string | null
   data_date: string | null // 洞察彙總視窗的資料錨點(max unified.date)
+  summary: string | null // 整體策略摘要(LLM 綜合三來源)
   items: InsightItem[]
+  metrics: InsightMetric[] // 各來源效率落差/前期變化
   raw_text: string | null
   error: string | null
 }

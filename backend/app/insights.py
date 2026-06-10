@@ -12,23 +12,40 @@ import time
 
 from sqlalchemy.orm import Session
 
-from app.analytics import compute_summary
+from app.analytics import compute_insight_summary
 from app.config import settings
 from app.models import Insight
 
 logger = logging.getLogger(__name__)
 
-_PROMPT_TEMPLATE = """你是一位資深數位行銷分析師。以下是各廣告來源近 30 天的成效 KPI 彙總(JSON):
+_PROMPT_TEMPLATE = """你是一位資深數位行銷分析師。以下是各廣告來源近 30 天(月度策略視窗)的成效彙總(JSON):
 
 {kpi_json}
 
-請依近 30 天數據給出月度預算調整建議。**只輸出 JSON**,格式為物件陣列,每個來源一條:
-[
-  {{"source": "<來源>", "action": "<加/減/維持>", "reason": "<繁體中文,一句具體理由,引用 ROAS 或 CPA 等數字>"}}
-]
+欄位說明:
+- current:近 30 天 KPI(roas=投報率、cost_twd=花費(TWD)、revenue_twd=營收(TWD)、conversions=轉換數、cpa=每次轉換成本、ctr=點擊率、budget_share=預算佔比)
+- revenue_share:近 30 天該來源營收佔全部營收的比例
+- efficiency_gap:revenue_share − budget_share;正值=多賺少花(效率好,考慮加預算),負值=多花少賺(效率差,考慮減預算)
+- prior:前 30 天 KPI(null 代表前期無資料,屬新投放)
+- delta_pct:近 30 天相較前 30 天的百分比變化(正=成長、負=下滑;null 代表前期無資料)
+  - delta_pct.roas:投報率變化%
+  - delta_pct.cost_twd:花費變化%
+  - delta_pct.revenue_twd:營收變化%
+  - delta_pct.conversions:轉換數變化%
+
+請給出月度預算調整建議。**只輸出 JSON**,格式為一個物件,含「整體建議摘要」與「逐來源建議」兩部分:
+{{
+  "summary": "<繁體中文,2~3 句的整體策略摘要:綜合三來源的動能與效率落差,給出本月預算的總體方向>",
+  "recommendations": [
+    {{"source": "<來源>", "action": "<加/減/維持>", "reason": "<繁體中文,一句具體理由>"}}
+  ]
+}}
 規則:
 - action 僅能是「加」「減」「維持」三者之一。
 - 全部用繁體中文。
+- summary 須點出「整體 ROAS 走勢」與「該把預算往哪傾斜」,並至少引用一個確定性數字。
+- **每條 reason 必須引用至少一個確定性數字**:直接取 delta_pct 的百分比變化或 efficiency_gap 的數值,不得自行重算或捏造數字。
+- 若某來源 prior=null(新投放、無前期可比),reason 改寫為說明現況 KPI,不得捏造前期百分比。
 - 不要輸出 JSON 以外的任何文字、不要用 markdown 程式碼框。
 """
 
@@ -46,15 +63,20 @@ def _strip_code_fence(text: str) -> str:
     return t
 
 
-def _parse_items(text: str) -> list[dict]:
-    """解析模型輸出為 [{source, action, reason}];失敗則拋例外(D9 防呆於上層處理)。"""
+def _parse_insight(text: str) -> tuple[str, list[dict]]:
+    """解析模型輸出為 (整體建議摘要, [{source, action, reason}]);失敗則拋例外(D9 防呆於上層處理)。
+
+    期望物件格式 {"summary": "...", "recommendations": [...]};
+    亦相容舊版直接回陣列(此時 summary 為空字串)與各種包裝鍵。
+    """
     data = json.loads(_strip_code_fence(text))
+    summary = ""
     if isinstance(data, dict):
-        # 不同供應商會把陣列包在不同鍵下(Gemini: items;NIM 常見 recommendations)
-        # → 取第一個為 list 的值,相容各種包裝鍵
-        data = next((v for v in data.values() if isinstance(v, list)), data)
+        summary = str(data.get("summary") or data.get("整體建議") or "")
+        # 逐條建議:取第一個為 list 的值,相容 recommendations/items 等包裝鍵
+        data = next((v for v in data.values() if isinstance(v, list)), [])
     if not isinstance(data, list):
-        raise ValueError("輸出非陣列")
+        raise ValueError("輸出無建議陣列")
     items = []
     for d in data:
         items.append({
@@ -62,7 +84,7 @@ def _parse_items(text: str) -> list[dict]:
             "action": str(d.get("action", "")),
             "reason": str(d.get("reason", "")),
         })
-    return items
+    return summary, items
 
 
 # 視為暫時性、值得重試的錯誤訊號(Gemini 高流量 / 限流)
@@ -171,22 +193,42 @@ def _generate_with_fallback(prompt: str) -> str:
     raise RuntimeError("\n".join(errors) or "無可用的 AI 供應商")
 
 
+def _build_metrics(ctx: dict) -> list[dict]:
+    """從 compute_insight_summary 結果抽出前端圖表要的確定性數字(每來源一筆)。"""
+    metrics = []
+    for b in ctx.get("by_source", []):
+        cur = b.get("current") or {}
+        delta = b.get("delta_pct") or {}
+        metrics.append({
+            "source": b["source"],
+            "efficiency_gap": b.get("efficiency_gap"),
+            "revenue_share": b.get("revenue_share"),
+            "budget_share": cur.get("budget_share"),
+            "roas_delta_pct": delta.get("roas"),
+        })
+    return metrics
+
+
 def generate_insights(db: Session) -> Insight:
     """產生洞察並存入 DB,回傳該筆 Insight。"""
-    summary = compute_summary(db, days=30)
+    ctx = compute_insight_summary(db)
     record = Insight()
+    # metrics 為後端確定性算出,與 LLM 成敗無關 → 任何分支都存,前端圖表恆可用
+    metrics = _build_metrics(ctx)
 
     if not settings.gemini_api_key and not settings.nvidia_api_key:
+        record.content = {"metrics": metrics}
         record.error = "未設定 GEMINI_API_KEY 或 NVIDIA_API_KEY,略過 AI 洞察產生"
         logger.warning(record.error)
         db.add(record)
         db.commit()
         return record
 
-    prompt = _PROMPT_TEMPLATE.format(kpi_json=json.dumps(summary, ensure_ascii=False, indent=2))
+    prompt = _PROMPT_TEMPLATE.format(kpi_json=json.dumps(ctx, ensure_ascii=False, indent=2))
     try:
         text = _generate_with_fallback(prompt)
     except Exception as exc:  # noqa: BLE001 呼叫失敗一律降級,不可崩潰
+        record.content = {"metrics": metrics}
         record.error = f"AI 呼叫失敗(Gemini 與 NVIDIA NIM 皆未成功):\n{exc}"
         logger.error(record.error)
         db.add(record)
@@ -194,9 +236,10 @@ def generate_insights(db: Session) -> Insight:
         return record
 
     try:
-        items = _parse_items(text)
-        record.content = {"items": items}
-    except Exception as exc:  # noqa: BLE001 解析失敗 → 降級保留原文
+        summary_text, items = _parse_insight(text)
+        record.content = {"summary": summary_text, "items": items, "metrics": metrics}
+    except Exception as exc:  # noqa: BLE001 解析失敗 → 降級保留原文 + 仍存 metrics
+        record.content = {"metrics": metrics}
         record.raw_text = text
         record.error = f"AI 回傳非預期格式,已保留原文:{exc}"
         logger.error(record.error)

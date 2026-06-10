@@ -17,3 +17,9 @@ frontend/.vite/
 # OS / editor
 .DS_Store
 *.log
+
+# Added by code-review-graph
+.code-review-graph/
+
+# MCP 伺服器設定與認證檔
+*.mcp.json

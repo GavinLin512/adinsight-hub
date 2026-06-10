@@ -196,11 +196,13 @@ def insights(db: Session = Depends(get_db)):
     data_date = db.query(func.max(UnifiedCampaign.date)).scalar()
     if record is None:
         return schemas.InsightOut(data_date=data_date, error="尚無洞察,請先執行 POST /etl/run")
-    items = (record.content or {}).get("items", []) if record.content else []
+    content = record.content or {}
     return schemas.InsightOut(
         generated_at=record.generated_at,
         data_date=data_date,
-        items=items,
+        summary=content.get("summary"),
+        items=content.get("items", []),
+        metrics=content.get("metrics", []),
         raw_text=record.raw_text,
         error=record.error,
     )
